@@ -65,7 +65,7 @@ contract Deposit {
         etherBalances[msg.sender] -= _amount;
         payable(msg.sender).transfer(_amount);
         
-        emit DepositEther(msg.sender, _amount);
+        emit WithdrawEther(msg.sender, _amount);
     }
 
     function withdrawToken(address _token, uint256 _amount) public {
@@ -73,6 +73,6 @@ contract Deposit {
         tokenBalances[_token][msg.sender] -= _amount;
         require(IERC20(_token).transfer(msg.sender, _amount), "Token transfer failed");
         
-        emit DepositToken(_token, msg.sender, _amount);
+        emit WithdrawToken(_token, msg.sender, _amount);
     }
 }
