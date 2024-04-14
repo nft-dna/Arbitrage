@@ -224,6 +224,13 @@ contract Trade is Deposit {
 
     function InstaTrade(address _router1, address _baseAsset, address _token2, address _token3, address _token4, uint256 _amount, uint deadlineDeltaSec) external {
         uint256 _startBalance = IERC20(_baseAsset).balanceOf(address(this));
+        _instaTrade(_router1, _baseAsset, _token2, _token3, _token4, _amount, _startBalance, deadlineDeltaSec);
+        uint256 _endBalance = IERC20(_baseAsset).balanceOf(address(this));
+        depositTokenSucceded(msg.sender, _baseAsset, _endBalance-_startBalance);
+        emit InstaTraded(msg.sender, _baseAsset, _token2, _token3, _token4, _router1, _amount, _endBalance-_startBalance);
+    }  
+
+    function _instaTrade(address _router1, address _baseAsset, address _token2, address _token3, address _token4, uint256 _amount, uint256 _startBalance, uint deadlineDeltaSec) internal {        
         require(_startBalance > 0, "StartBalance must be greater than 0");
         uint256 token2InitialBalance = IERC20(_token2).balanceOf(address(this));
         uint256 token3InitialBalance = IERC20(_token3).balanceOf(address(this));
@@ -237,8 +244,6 @@ contract Trade is Deposit {
         _swapToken(_router1,_token4, _baseAsset, tradeableAmount4, deadlineDeltaSec);
         uint256 _endBalance = IERC20(_baseAsset).balanceOf(address(this));
         require(_endBalance > _startBalance, "Trade Reverted, No Profit Made");
-        depositTokenSucceded(msg.sender, _baseAsset, _endBalance-_startBalance);
-        //emit InstaTraded(msg.sender, _baseAsset, _token2, _token3, _token4, _router1, _amount, _endBalance-_startBalance);
     }    
 
     // Allow the contract to receive Ether
