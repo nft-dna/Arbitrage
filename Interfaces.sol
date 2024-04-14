@@ -18,7 +18,7 @@ interface IERC20 {
 
 
 enum DexInterfaceType {
-    Unknown,
+    //Unknown,
     IUniswapV2Router
     //ISushiSwapRouter
 }
@@ -29,6 +29,12 @@ interface IUniswapV2Router {
     function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts);
     function swapETHForExactTokens(uint amountOut,address[] calldata path,address to,uint deadline) external payable returns (uint[] memory amounts);
     function swapExactETHForTokens(uint amountOutMin,address[] calldata path,address to,uint deadline) external payable returns (uint[] memory amounts);
+}
+
+interface IUniswapV2Pair {
+  function token0() external view returns (address);
+  function token1() external view returns (address);
+  function swap(uint256 amount0Out,	uint256 amount1Out,	address to,	bytes calldata data) external;
 }
 
 /*
