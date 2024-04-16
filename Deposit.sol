@@ -37,7 +37,7 @@ contract Deposit {
     function depositTokenSucceded(address issuer, address _token, uint256 _amount) internal {
         tokenBalances[_token][msg.sender] += _amount;        
         if (tokenAddressesPresent[_token] == false) {
-            tokenAddresses[tokenAddressesCount] = _token;
+            tokenAddresses.push(_token);
             tokenAddressesCount = tokenAddressesCount + 1;
             tokenAddressesPresent[_token] = true;
         }
