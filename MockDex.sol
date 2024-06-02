@@ -8,7 +8,7 @@ contract MockDEX {
     mapping(address => mapping(address => uint24)) public fees;    // Mock fees for token pairs
     address payable OWNER;
 
-    constructo {
+    constructor() {
     OWNER = payable(msg.sender);
     }    
 
