@@ -17,6 +17,9 @@ contract MockDEX {
         _;
     }    
 
+    // Allow the contract to receive Ether
+    receive () external payable  {    
+    }   
 
     // Set mock price for a token pair
     function setPrice(address tokenIn, address tokenOut, uint256 price) external onlyOwner {
