@@ -22,19 +22,19 @@ contract Trade is Deposit {
     // Mapping to store pools by token pairs
     mapping(address => mapping(address => uint24)) public tokenV3PoolsFee;
 
-    function addTestTokens(address[] calldata _tokens) external onlyOwner {
+    function AddTestTokens(address[] calldata _tokens) external onlyOwner {
         for (uint i=0; i<_tokens.length; i++) {
             tokens.push(_tokens[i]);
         }
     }
 
-    function addTestStables(address[] calldata _stables) external onlyOwner {
+    function AddTestStables(address[] calldata _stables) external onlyOwner {
         for (uint i=0; i<_stables.length; i++) {
             stables.push(_stables[i]);
         }
     }    
 
-    function addTestV3PoolFee(address token1, address token2, uint24 fee) external onlyOwner {
+    function AddTestV3PoolFee(address token1, address token2, uint24 fee) external onlyOwner {
         tokenV3PoolsFee[token1][token2] = fee;
         tokenV3PoolsFee[token2][token1] = fee;
     }      
@@ -43,7 +43,7 @@ contract Trade is Deposit {
         OWNER = payable(msg.sender);
     }
 
-    function isDexAdded(address _dex) internal view returns (bool) {
+    function IsDexAdded(address _dex) internal view returns (bool) {
         for (uint256 i = 0; i < dexAddresses.length; i++) {
             if (dexAddresses[i] == _dex) {
                 return true;
@@ -52,10 +52,10 @@ contract Trade is Deposit {
         return false;
     }
 
-    function SetDex(address[] calldata  _dex, DexInterfaceType[] calldata  _interface) public onlyOwner {
+    function AddDex(address[] calldata  _dex, DexInterfaceType[] calldata  _interface) public onlyOwner {
         require ( _dex.length == _interface.length, "Invalid param");
         for (uint i=0; i<_dex.length; i++) {
-            if (!isDexAdded(_dex[i])) {
+            if (!IsDexAdded(_dex[i])) {
                 dexAddresses.push(_dex[i]);
             }
             dexInterface[_dex[i]] = _interface[i];
@@ -84,7 +84,7 @@ contract Trade is Deposit {
         }
     }
 
-    function estimateDualDexTrade(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount) external view returns (uint256) {
+    function EstimateDualDexTrade(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount) external view returns (uint256) {
         uint256 amtBack1 = getAmountOutMin(_fromDex, _fromPoolFee, _fromToken, _toToken, _fromAmount);
         uint256 amtBack2 = getAmountOutMin(_toDex, _toPoolFee, _toToken, _fromToken, amtBack1);
         return amtBack2;
