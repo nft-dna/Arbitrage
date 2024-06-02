@@ -156,6 +156,19 @@ contract MockDEX {
         return amountOut;
     }
 
+    // Mock Uniswap V3 quoteExactInputSingle
+    function quoteExactInputSingle(
+        address tokenIn,
+        address tokenOut,
+        uint24 fee,
+        uint256 amountIn
+    ) external view returns (uint256 amountOut) {
+        uint256 price = prices[tokenIn][tokenOut];
+        require(price > 0, "Price not set");
+
+        amountOut = (amountIn * price * (10000 - fee)) / 10000; // Apply price and fee
+    }
+
     // Allow the contract to receive tokens
     function depositToken(address token, uint256 amount) external onlyOwner {
         IERC20(token).transferFrom(msg.sender, address(this), amount);
