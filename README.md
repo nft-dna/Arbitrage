@@ -12,5 +12,5 @@ npx hardhat compile
 
 ## Test
 ```
-npx hardhat test
+npx hardhat test ./test/HardhatOverAll.test.js
 ```
