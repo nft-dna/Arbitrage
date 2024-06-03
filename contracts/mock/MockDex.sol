@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import "./Interfaces.sol";
+import "./../Interfaces.sol";
 
 contract MockDEX {
     mapping(address => mapping(address => uint256)) public prices; // Mock prices for token pairs
