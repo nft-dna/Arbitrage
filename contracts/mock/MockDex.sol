@@ -161,7 +161,8 @@ contract MockDEX {
         address tokenIn,
         address tokenOut,
         uint24 fee,
-        uint256 amountIn
+        uint256 amountIn,
+        uint160 sqrtPriceLimitX96
     ) external view returns (uint256 amountOut) {
         uint256 price = prices[tokenIn][tokenOut];
         require(price > 0, "Price not set");
