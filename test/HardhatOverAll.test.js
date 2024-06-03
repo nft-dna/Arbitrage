@@ -4,6 +4,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
+/*
 const weiToEther = (n) => {
     return web3.utils.fromWei(n.toString(), 'ether');
 }
@@ -13,6 +14,7 @@ async function getGasCosts(receipt) {
     const gasPrice = new BN(tx.gasPrice);
     return gasPrice.mul(new BN(receipt.receipt.gasUsed));
 }    
+*/
 
 describe("Overall Test", function () {	
 		
@@ -34,8 +36,8 @@ describe("Overall Test", function () {
 	let owner;
 	let addr1;
 	let addr2;
-	let initialSupply = ethers.parseEther("1000");
-	let initialDexReserve = ethers.parseEther("300");
+	let initialSupply = 3000000;
+	let initialDexReserve = 1000000;
   
 	beforeEach(async function () {
 		[owner, addr1, addr2] = await ethers.getSigners();	
@@ -96,30 +98,30 @@ describe("Overall Test", function () {
 
 		
 		//fee: The fee tier of the pool (e.g., 500, 3000, 10000 for 0.05%, 0.3%, 1% respectively).
-		await dex1.setPrice(tokenAaddr, tokenBaddr, ethers.parseEther("0.1"));
+		await dex1.setPrice(tokenAaddr, tokenBaddr, ethers.parseEther("0.0001"));
 		await dex1.setFee(tokenAaddr, tokenBaddr, 3000);
-		await dex1.setPrice(tokenBaddr, tokenAaddr, ethers.parseEther("0.1"));
+		await dex1.setPrice(tokenBaddr, tokenAaddr, ethers.parseEther("0.0001"));
 		await dex1.setFee(tokenBaddr, tokenAaddr, 3000);
-		await dex1.setPrice(tokenAaddr, tokenCaddr, ethers.parseEther("0.1"));
+		await dex1.setPrice(tokenAaddr, tokenCaddr, ethers.parseEther("0.0001"));
 		await dex1.setFee(tokenAaddr, tokenCaddr, 3000);
-		await dex1.setPrice(tokenCaddr, tokenAaddr, ethers.parseEther("0.1"));
+		await dex1.setPrice(tokenCaddr, tokenAaddr, ethers.parseEther("0.0001"));
 		await dex1.setFee(tokenCaddr, tokenAaddr, 3000);
-		await dex1.setPrice(tokenBaddr, tokenCaddr, ethers.parseEther("0.1"));
+		await dex1.setPrice(tokenBaddr, tokenCaddr, ethers.parseEther("0.0001"));
 		await dex1.setFee(tokenBaddr, tokenCaddr, 3000);
-		await dex1.setPrice(tokenCaddr, tokenBaddr, ethers.parseEther("0.1"));
+		await dex1.setPrice(tokenCaddr, tokenBaddr, ethers.parseEther("0.0001"));
 		await dex1.setFee(tokenCaddr, tokenBaddr, 3000);
 
-		await dex2.setPrice(tokenAaddr, tokenBaddr, ethers.parseEther("0.1"));
+		await dex2.setPrice(tokenAaddr, tokenBaddr, ethers.parseEther("0.0001"));
 		await dex2.setFee(tokenAaddr, tokenBaddr, 3000);
-		await dex2.setPrice(tokenBaddr, tokenAaddr, ethers.parseEther("0.1"));
+		await dex2.setPrice(tokenBaddr, tokenAaddr, ethers.parseEther("0.0001"));
 		await dex2.setFee(tokenBaddr, tokenAaddr, 3000);
-		await dex2.setPrice(tokenAaddr, tokenCaddr, ethers.parseEther("0.1"));
+		await dex2.setPrice(tokenAaddr, tokenCaddr, ethers.parseEther("0.0001"));
 		await dex2.setFee(tokenAaddr, tokenCaddr, 3000);
-		await dex2.setPrice(tokenCaddr, tokenAaddr, ethers.parseEther("0.1"));
+		await dex2.setPrice(tokenCaddr, tokenAaddr, ethers.parseEther("0.0001"));
 		await dex2.setFee(tokenCaddr, tokenAaddr, 3000);
-		await dex2.setPrice(tokenBaddr, tokenCaddr, ethers.parseEther("0.1"));
+		await dex2.setPrice(tokenBaddr, tokenCaddr, ethers.parseEther("0.0001"));
 		await dex2.setFee(tokenBaddr, tokenCaddr, 3000);
-		await dex2.setPrice(tokenCaddr, tokenBaddr, ethers.parseEther("0.1"));
+		await dex2.setPrice(tokenCaddr, tokenBaddr, ethers.parseEther("0.0001"));
 		await dex2.setFee(tokenCaddr, tokenBaddr, 3000);		
 	});
 		
@@ -149,14 +151,30 @@ describe("Overall Test", function () {
 		await Trader.AddTestStables([tokenCaddr]);
 		await Trader.AddTestV3PoolFee(tokenAaddr, tokenBaddr, 3000);
 		
-		const amountOutMin = await Trader.getAmountOutMin(dex1addr, 0, tokenAaddr, tokenBaddr, ethers.parseEther("0.05"));
-		//console.log(amountOutMin);
-
-		//const estimate = await Trader.EstimateDualDexTrade(tokenAaddr, tokenBaddr, dex1addr, 0, dex2addr,3000, ethers.parseEther("0.1"));
-	  	//console.log(estimate);
+		//const amtBack1 = await Trader.getAmountOutMin(dex1addr, 0, tokenAaddr, tokenBaddr, ethers.parseEther("0.1"));
+		//console.log(amtBack1);
+        //const amtBack2 = await Trader.getAmountOutMin(dex2addr, 3000, tokenBaddr, tokenAaddr, amtBack1);
+		//console.log(amtBack1);
+		const estimateDex1 = await Trader.EstimateDualDexTrade(tokenAaddr, tokenBaddr, dex1addr, 0, dex2addr, 3000, ethers.parseEther("0.1"));
+		expect(estimateDex1.toString()).to.be.equal("0");
 		
-		//await Trader.InstaSearch(dex1addr, tokenAaddr, ethers.parseEther("0.05"));
-		//InstaTradeTokens(address _router1, address _baseAsset, address _token2, address _token3, address _token4, uint256 _amount, uint deadlineDeltaSec)	
+		const searchDex1 = await Trader.InstaSearch(dex1addr, tokenAaddr, ethers.parseEther("0.05"));
+		expect(searchDex1[0].toString()).to.be.equal("0");
+		expect(searchDex1[1].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
+		expect(searchDex1[2].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
+		expect(searchDex1[3].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
+			
+		const estimateDex2 = await Trader.EstimateDualDexTrade(tokenAaddr, tokenBaddr, dex2addr, 3000, dex1addr, 0, ethers.parseEther("0.1"));
+		expect(estimateDex2.toString()).to.be.equal("0");		
+		
+		const searchDex2 = await Trader.InstaSearch(dex2addr, tokenAaddr, ethers.parseEther("0.05"));
+		console.log(searchDex2);
+		expect(searchDex2[0].toString()).to.be.equal("0");
+		//expect(searchDex2[1].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
+		//expect(searchDex2[2].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
+		//expect(searchDex2[3].toString()).to.be.equal("0x0000000000000000000000000000000000000000");		
+		
+		//const instrade = await Trader.InstaTradeTokens(dex1addr, tokenAaddr, tokenCaddr, tokenBaddr, tokenAaddr, ethers.parseEther("0.1"), 0);
 	  });
 	});	
 });
