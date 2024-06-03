@@ -245,21 +245,25 @@ contract Trade is Deposit {
         address token3;
         //for (uint i0=0; i0<dexAddresses.length; i0++) {
             for (uint i1=0; i1<tokens.length; i1++) {
-                for (uint i2=0; i2<stables.length; i2++) {
-                    for (uint i3=0; i3<tokens.length; i3++) {
-                        uint256 amtBack = AmountBack(_router, _baseAsset, _amount, tokens[i1], stables[i2], tokens[i3]);
-                        if (amtBack > _amount && amtBack > maxAmtBack) {
-                            maxAmtBack = amtBack;
-                            token1 = tokens[i1];
-                            token2 = tokens[i2];
-                            token3 = tokens[i3];
-                        }
-                    }
-                }
+				if (_baseAsset != tokens[i1]) {
+					for (uint i2=0; i2<stables.length; i2++) {
+						for (uint i3=0; i3<tokens.length; i3++) {
+							if (_baseAsset != tokens[i3]) {
+								uint256 amtBack = AmountBack(_router, _baseAsset, _amount, tokens[i1], stables[i2], tokens[i3]);
+								if (amtBack > _amount && amtBack > maxAmtBack) {
+									maxAmtBack = amtBack;
+									token1 = tokens[i1];
+									token2 = tokens[i2];
+									token3 = tokens[i3];
+								}
+							}
+						}
+					}
+				}
             }
         //}
         return (maxAmtBack,token1,token2,token3);
-    }   
+    } 
 
     function InstaTradeTokens(address _router1, address _baseAsset, address _token2, address _token3, address _token4, uint256 _amount, uint deadlineDeltaSec) external {
         uint256 _startBalance = IERC20(_baseAsset).balanceOf(address(this));
