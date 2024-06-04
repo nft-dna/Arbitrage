@@ -10,7 +10,7 @@ async function main(network) {
 	console.log("Deploying contracts with the account:", deployer.address);
 	console.log("Account balance:", await ethers.provider.getBalance(deployer));
 	
-	const Trade = await ethers.getContractFactory("Trade");
+	const Trade = await ethers.getContractFactory("Trader");
 	const trade = await Trade.deploy();
 	await trade.waitForDeployment();
 	const TRADE_ADDRESS = await trade.getAddress();
