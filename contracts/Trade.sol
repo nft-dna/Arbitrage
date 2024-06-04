@@ -13,16 +13,27 @@ contract Trade is Deposit {
     address[] public dexAddresses; // Array to store dex addresses
     mapping(address => DexInterfaceType) public dexInterface;    
 
-    event DualDexEtherTraded(address indexed trader, address indexed _toToken, address _fromDex, address _toDex, uint256 _fromAmount, uint256 _gainedAmount);
-    event DualDexTokenTraded(address indexed trader, address indexed _fromToken, address indexed _toToken, address _fromDex, address _toDex, uint256 _fromAmount, uint256 _gainedAmount);
-    event InstaTraded(address indexed trader, address indexed _baseAsset, address _token2, address _token3, address _token4, address _fromDex, uint256 _fromAmount, uint256 _gainedAmount);
+    struct routeChain {
+        address router;
+        address asset;
+        uint24 poolFee;
+    }		
+	
+	event DualDexTraded(address indexed trader, address indexed _fromToken, address indexed _toToken, address _fromDex, address _toDex, uint256 _fromAmount, uint256 _gainedAmount);
+	event InstaTraded(address indexed trader, address indexed _baseAsset, routeChain[] _routeData, uint256 _fromAmount, uint256 _gainedAmount);
 
     address [] public tokens;
     address [] public stables;
     // Mapping to store pools by token pairs
-    mapping(address => mapping(address => uint24)) public tokenV3PoolsFee;
+    mapping(address => mapping(address => mapping(address => uint24))) public tokenV3PoolsFee;
 
-    function AddTestTokens(address[] calldata _tokens) external onlyOwner {
+    function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
+        require(tokenA != tokenB, 'IDENTICAL_ADDRESSES');
+        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        require(token0 != address(0), 'ZERO_ADDRESS');
+    }
+	
+	function AddTestTokens(address[] calldata _tokens) external onlyOwner {
         for (uint i=0; i<_tokens.length; i++) {
             tokens.push(_tokens[i]);
         }
@@ -34,10 +45,15 @@ contract Trade is Deposit {
         }
     }    
 
-    function AddTestV3PoolFee(address token1, address token2, uint24 fee) external onlyOwner {
-        tokenV3PoolsFee[token1][token2] = fee;
-        tokenV3PoolsFee[token2][token1] = fee;
-    }      
+    function AddTestV3PoolFee(address router, address token1, address token2, uint24 fee) external onlyOwner {
+		(address tokenA, address tokenB) = sortTokens(token1, token2);
+        tokenV3PoolsFee[router][tokenA][tokenB] = fee;
+    }
+	
+    function getTestV3PoolFee(address router, address token1, address token2) internal view returns (uint24) {
+		(address tokenA, address tokenB) = sortTokens(token1, token2);
+        return tokenV3PoolsFee[router][tokenA][tokenB];
+    }	
 
     constructor() {
         OWNER = payable(msg.sender);
@@ -66,140 +82,94 @@ contract Trade is Deposit {
         return dexAddresses.length;
     }
 
-    function getAmountOutMin(address router, uint24 poolfee, address _tokenIn, address _tokenOut, uint256 _amount) public view returns (uint256 ) {
+    function GetAmountOutMin(address router, uint24 poolfee, address _tokenIn, address _tokenOut, uint256 _amount) public view returns (uint256 ) {
         if (dexInterface[router] == DexInterfaceType.IUniswapV3Router || poolfee > 0) {
+			require(NATIVE_TOKEN != _tokenIn, "Router does not support direct ETH swap");
+			require(NATIVE_TOKEN != _tokenOut, "Router does not support direct ETH swap");
+			if (poolfee >= 1000000) {
+				poolfee = 0;
+			}
             uint256 result = IQuoter(router).quoteExactInputSingle(_tokenIn, _tokenOut , poolfee, _amount, 0);
             return result;
         } else {
-            uint256 result = 0;            
+            //uint256 result = 0;            
             address[] memory path;
             path = new address[](2);
             path[0] = _tokenIn;
             path[1] = _tokenOut;            
-            try IUniswapV2Router(router).getAmountsOut(_amount, path) returns (uint256[] memory amountOutMins) {
-                result = amountOutMins[path.length -1];
-            } catch {
-            }
-            return result;            
+            //try IUniswapV2Router(router).getAmountsOut(_amount, path) returns (uint256[] memory amountOutMins) {
+            //    result = amountOutMins[path.length-1];
+            //} catch {
+            //}
+            //return result;      			
+			uint256[] memory amountOutMins = IUniswapV2Router(router).getAmountsOut(_amount, path);
+			return amountOutMins[path.length-1];      
         }
     }
 
     function EstimateDualDexTrade(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount) external view returns (uint256) {
-        uint256 amtBack1 = getAmountOutMin(_fromDex, _fromPoolFee, _fromToken, _toToken, _fromAmount);
-        uint256 amtBack2 = getAmountOutMin(_toDex, _toPoolFee, _toToken, _fromToken, amtBack1);
+        uint256 amtBack1 = GetAmountOutMin(_fromDex, _fromPoolFee, _fromToken, _toToken, _fromAmount);
+        uint256 amtBack2 = GetAmountOutMin(_toDex, _toPoolFee, _toToken, _fromToken, amtBack1);
         return amtBack2;
     }
   
-    function DualDexTrade(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount, uint deadlineDeltaSec) /*payable*/ public {
-        if (NATIVE_TOKEN == _fromToken) {
-            _arbEther(_toToken, _fromDex, _toDex, _fromAmount, deadlineDeltaSec);
+    function DualDexTrade(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount, uint deadlineDeltaSec) payable public {
+        uint256 startBalance = 0;
+		if (NATIVE_TOKEN == _fromToken) {
+			if (msg.value >= 1000000) {
+				depositEtherSucceded(msg.sender, msg.value);
+			}
+			startBalance = address(this).balance;
+			require(startBalance >= _fromAmount, "Insufficient Ether balance");
         } else {
-            _arbToken(_fromToken, _toToken, _fromDex, _fromPoolFee, _toDex, _toPoolFee, _fromAmount, deadlineDeltaSec);
+			startBalance = IERC20(_fromToken).balanceOf(address(this));
+			require(startBalance >= _fromAmount, "Insufficient Token balance");		
         }
+		uint256 tokenBalance = IERC20(_toToken).balanceOf(address(this));
+		uint256 tradeableAmount = _tradeToken(_fromDex, _fromToken, _toToken, _fromPoolFee, _fromAmount, deadlineDeltaSec, tokenBalance);
+		tradeableAmount = _tradeToken(_toDex, _toToken, _fromToken, _toPoolFee, tradeableAmount, deadlineDeltaSec, startBalance);
+		require(tradeableAmount > 0, "End balance must exceed start balance.");
+		
+		if (NATIVE_TOKEN == _fromToken) {
+			depositEtherSucceded(msg.sender, tradeableAmount);
+		} else {
+			depositTokenSucceded(msg.sender, _fromToken, tradeableAmount);
+		}		
+		emit DualDexTraded(msg.sender, _fromToken, _toToken, _fromDex, _toDex, _fromAmount, tradeableAmount);		
     }
 
-    function _arbEther(address _token, address _fromDex, address _toDex, uint256 _fromAmount, uint deadlineDeltaSec) /*payable*/ internal {
-        require(_fromAmount > 0, "Amount must be greater than 0");
-        require(dexInterface[_fromDex] == DexInterfaceType.IUniswapV2Router, "fromDex does not support direct ETH swap");
-        require(dexInterface[_toDex] == DexInterfaceType.IUniswapV2Router, "toDex does not support direct ETH swap");
-        
-        // Track original balance
-        uint256 _startBalance = address(this).balance;
-        require(_startBalance >= _fromAmount, "Insufficient token balance");
-        
-        // Perform the arb trade
-        _tradeEther( _token, _fromDex, _toDex, _fromAmount, deadlineDeltaSec, _startBalance);
-
-        // Track result balance
-        uint256 _endBalance = address(this).balance;
-
-        // Require that arbitrage is profitable
-        require(_endBalance > _startBalance, "End balance must exceed start balance.");
-
-        depositEtherSucceded(msg.sender, _endBalance-_startBalance);
-        emit DualDexEtherTraded(msg.sender, _token, _fromDex, _toDex, _fromAmount, _endBalance-_startBalance);
-    }
-
-    function _arbToken(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount, uint deadlineDeltaSec) /*payable*/ internal {
-        require(_fromAmount > 0, "Amount must be greater than 0");
-        
-        // Track original balance
-        uint256 _startBalance = IERC20(_fromToken).balanceOf(address(this));
-        require(_startBalance >= _fromAmount, "Insufficient token balance");
-        
-        // Perform the arb trade
-        _tradeToken(_fromToken, _toToken, _fromDex, _fromPoolFee, _toDex, _toPoolFee, _fromAmount, deadlineDeltaSec, _startBalance);
-
-        // Track result balance
-        uint256 _endBalance = IERC20(_fromToken).balanceOf(address(this));
-
-        // Require that arbitrage is profitable
-        require(_endBalance > _startBalance, "End balance must exceed start balance.");
-
-        depositTokenSucceded(msg.sender, _fromToken, _endBalance-_startBalance);
-        emit DualDexTokenTraded(msg.sender, _fromToken, _toToken, _fromDex, _toDex, _fromAmount, _endBalance-_startBalance);
-    }
-
-    function _tradeEther(address _token, address _fromDex, address _toDex, uint256 _fromAmount, uint deadlineDeltaSec, uint256 _startBalance) internal {
-        //require ( dexInterface[_fromDex] > DexInterfaceType.Unknown, "Unsupported from dex");
-        //require ( dexInterface[_toDex] > DexInterfaceType.Unknown, "Unsupported to dex");
-
-        // Track the balance of the token RECEIVED from the trade
-        //uint256 _startBalance = address(this).balance;
-
-        address[] memory path = new address[](1);
-        path[0] = _token;
-        //path[1] = _toToken;
-        /*uint256[] memory amounts_0 =*/ IUniswapV2Router(_fromDex).swapExactETHForTokens{value: _fromAmount}(_fromAmount, path, address(this), block.timestamp + deadlineDeltaSec);
-        // Get the amount of tokens received        
-        //uint256 amountOut = amounts_0[1];
-        // Calculate the how much of the token we received
-        uint256 _afterBalance = address(this).balance;        
-        uint256 _toAmount = _afterBalance - _startBalance;
-
-        IERC20(_token).approve(address(_toDex), _toAmount); 
-        path[0] = _token;
-        //path[1] = _fromToken;
-        /*uint256[] memory amounts_1 =*/ IUniswapV2Router(_toDex).swapExactTokensForETH(_toAmount,0, path, address(this), block.timestamp + deadlineDeltaSec);
-        // Read _toToken balance after swap        
-        //uint256 amountOut_1 = amounts_1[1];
+    function _tradeToken(        
+        address router,    
+        address from,
+        address to,
+		uint24 poolFee,
+        uint256 amount,
+        uint deadlineDeltaSec,
+        uint256 initialBalance
+    ) internal returns (uint256 tradeableAmount) {
+	
+        _swapToken(router, poolFee, from, to, amount, deadlineDeltaSec);
+		
+		uint256 afterBalance = 0;
+		if (NATIVE_TOKEN != to) {
+			afterBalance = IERC20(to).balanceOf(address(this));
+		} else {
+			afterBalance = address(this).balance;
+		}
+		return afterBalance - initialBalance;
     }    
-
-    function _tradeToken(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount, uint deadlineDeltaSec, uint256 _startBalance) internal {
-        //require ( dexInterface[_fromDex] > DexInterfaceType.Unknown, "Unsupported from dex");
-        //require ( dexInterface[_toDex] > DexInterfaceType.Unknown, "Unsupported to dex");
-
-        // Track the balance of the token RECEIVED from the trade
-        //uint256 _startBalance = IERC20(_toToken).balanceOf(address(this));
-
-        _swapToken(_fromDex, _fromPoolFee, _fromToken, _toToken, _fromAmount, deadlineDeltaSec);
-        /*
-        IERC20(_fromToken).approve(address(_fromDex) , _fromAmount); 
-        address[] memory path = new address[](2);
-        path[0] = _fromToken;
-        path[1] = _toToken;
-        /uint256[] memory amounts_0 =/ IUniswapV2Router(_fromDex).swapExactTokensForTokens(_fromAmount, 0, path, address(this), block.timestamp);
-        // Get the amount of tokens received        
-        //uint256 amountOut = amounts_0[1];
-        // Calculate the how much of the token we received
-        */
-        uint256 _afterBalance = IERC20(_toToken).balanceOf(address(this));        
-        uint256 _toAmount = _afterBalance - _startBalance;
-
-        _swapToken(_toDex, _toPoolFee, _toToken, _fromToken, _toAmount, deadlineDeltaSec);
-        /*
-        IERC20(_toToken).approve(address(_toDex) ,_toAmount); 
-        path[0] = _toToken;
-        path[1] = _fromToken;
-        /uint256[] memory amounts_1 =/ IUniswapV2Router(_toDex).swapExactTokensForTokens(_toAmount,0, path, address(this), block.timestamp);
-        // Read _toToken balance after swap        
-        //uint256 amountOut_1 = amounts_1[1];
-        */
-    }
-
+	
+	
     function _swapToken(address router, uint24 _poolFee, address _tokenIn, address _tokenOut, uint256 _amount, uint deadlineDeltaSec) private {
-        IERC20(_tokenIn).approve(router, _amount);
+		if (NATIVE_TOKEN != _tokenIn) {
+			IERC20(_tokenIn).approve(router, _amount);
+		}
         if (dexInterface[router] == DexInterfaceType.IUniswapV3Router || _poolFee > 0) {
+			require(NATIVE_TOKEN != _tokenIn, "Router does not support direct ETH swap");
+			require(NATIVE_TOKEN != _tokenOut, "Router does not support direct ETH swap");
+			if (_poolFee == 1) {
+				_poolFee = 0;
+			}		
             bytes memory params = abi.encode(
                 _tokenIn,
                 _tokenOut,
@@ -211,34 +181,87 @@ contract Trade is Deposit {
             );           
             IUniswapV3Router(router).exactInputSingle(params);
         } else {
-            address[] memory path;
-            path = new address[](2);
-            path[0] = _tokenIn;
-            path[1] = _tokenOut;
-            uint deadline = block.timestamp + deadlineDeltaSec;            
-            IUniswapV2Router(router).swapExactTokensForTokens(_amount, 0, path, address(this), deadline);    
+			uint deadline = block.timestamp + deadlineDeltaSec;            
+			if (NATIVE_TOKEN == _tokenIn) {
+				address[] memory path = new address[](1);
+				path[0] = _tokenOut;			
+				IUniswapV2Router(router).swapExactETHForTokens{value: _amount}(_amount, path, address(this), block.timestamp + deadlineDeltaSec);
+			} else if (NATIVE_TOKEN == _tokenIn) {
+				address[] memory path = new address[](1);
+				path[0] = _tokenIn;			
+				IUniswapV2Router(router).swapExactTokensForETH(_amount, 0, path, address(this), block.timestamp + deadlineDeltaSec);
+			} else {
+				address[] memory path;
+				path = new address[](2);
+				path[0] = _tokenIn;
+				path[1] = _tokenOut;
+				IUniswapV2Router(router).swapExactTokensForTokens(_amount, 0, path, address(this), deadline);    
+			}
         }
     }    
 
+	function InstaTradeTokens(routeChain[] calldata _routedata, uint256 _startAmount, uint deadlineDeltaSec) payable public {
+		require ( _routedata.length > 1, "Invalid param");
+        
+        uint256 startBalance = 0;
+		if (NATIVE_TOKEN == _routedata[0].asset) {
+			if (msg.value > 0) {
+				depositEtherSucceded(msg.sender, msg.value);
+			}
+			startBalance = address(this).balance;
+			require(startBalance >= _startAmount, "Insufficient Ether balance");
+        } else {
+			startBalance = IERC20(_routedata[0].asset).balanceOf(address(this));
+			require(startBalance >= _startAmount, "Insufficient Token balance");		
+        }
+	
+		uint256 gainedAmount = _instaTradeTokens(_routedata, _startAmount, startBalance, deadlineDeltaSec);			
+		if (NATIVE_TOKEN == _routedata[0].asset) {
+			depositEtherSucceded(msg.sender, gainedAmount);
+		} else {
+			depositTokenSucceded(msg.sender, _routedata[0].asset, gainedAmount);
+		}			
+        emit InstaTraded(msg.sender, _routedata[0].asset, _routedata, _startAmount, gainedAmount);
+    }  
+	
+    function _instaTradeTokens(routeChain[] calldata _routedata, uint256 _amount, uint256 _startBalance, uint deadlineDeltaSec) internal returns (uint256 gainedAmount) {
+		uint256[] memory balance = new uint256[](_routedata.length);
+		for (uint b=1; b < _routedata.length; b++) {
+			if (NATIVE_TOKEN == _routedata[b].asset) {
+				balance[b-1] = address(this).balance;
+			} else {
+				balance[b-1] = (IERC20(_routedata[b].asset).balanceOf(address(this)));
+			}
+		}
+		balance[_routedata.length-1] = _startBalance;
+		
+		uint256 tradeableAmount = _amount;
+		uint i = 0;
+		for (i; i < _routedata.length-1; i++) {
+			tradeableAmount = _tradeToken(_routedata[i].router, _routedata[i].asset, _routedata[i+1].asset, _routedata[i].poolFee, tradeableAmount, deadlineDeltaSec, balance[i]);
+		}
+		tradeableAmount = _tradeToken(_routedata[i].router, _routedata[i].asset, _routedata[0].asset, _routedata[i].poolFee, tradeableAmount, deadlineDeltaSec, balance[i]);
+        require(tradeableAmount > 0, "Trade Reverted, No Profit Made");
+		return tradeableAmount;
+    }
+		
     function AmountBack(
         address router,
         address baseAsset,
         uint256 amount,
         address token1,
-        address stable,
+        address token2,
         address token3
     ) internal view returns (uint256) {
-        uint256 amtBack = getAmountOutMin(router, tokenV3PoolsFee[baseAsset][token1], baseAsset, token1, amount);
-        amtBack = getAmountOutMin(router, tokenV3PoolsFee[token1][stable], token1, stable, amtBack);
-        amtBack = getAmountOutMin(router, tokenV3PoolsFee[stable][token3], stable, token3, amtBack);
-        amtBack = getAmountOutMin(router, tokenV3PoolsFee[token3][baseAsset], token3, baseAsset, amtBack);
+        uint256 amtBack = GetAmountOutMin(router, getTestV3PoolFee(router, baseAsset, token1), baseAsset, token1, amount);
+        amtBack = GetAmountOutMin(router, getTestV3PoolFee(router, token1, token2), token1, token2, amtBack);
+        amtBack = GetAmountOutMin(router, getTestV3PoolFee(router, token2, token3), token2, token3, amtBack);
+        amtBack = GetAmountOutMin(router, getTestV3PoolFee(router, token3, baseAsset), token3, baseAsset, amtBack);
         return amtBack;
     }
 
-    /*
-    Base Asset > Altcoin > Stablecoin > Altcoin > Base Asset
-    */ 
-    function InstaSearch(address/*[] calldata _routers*/_router, address _baseAsset, uint256 _amount) external view returns (uint256,address,address,address) {
+    // Base Asset > Altcoin > Stablecoin > Altcoin > Base Asset
+    function CrossStableSearch(address/*[] calldata _routers*/_router, address _baseAsset, uint256 _amount) external view returns (uint256,address,address,address) {
         uint256 maxAmtBack = 0;
         address token1;
         address token2;
@@ -263,38 +286,8 @@ contract Trade is Deposit {
             }
         //}
         return (maxAmtBack,token1,token2,token3);
-    } 
-
-    function InstaTradeTokens(address _router1, address _baseAsset, address _token2, address _token3, address _token4, uint256 _amount, uint deadlineDeltaSec) external {
-        uint256 _startBalance = IERC20(_baseAsset).balanceOf(address(this));
-        require(_startBalance > 0, "StartBalance must be greater than 0");
-        _instaTradeTokens(_router1, _baseAsset, _token2, _token3, _token4, _amount, _startBalance, deadlineDeltaSec);
-        uint256 _endBalance = IERC20(_baseAsset).balanceOf(address(this));
-        depositTokenSucceded(msg.sender, _baseAsset, _endBalance-_startBalance);
-        emit InstaTraded(msg.sender, _baseAsset, _token2, _token3, _token4, _router1, _amount, _endBalance-_startBalance);
-    }  
-
-    function _instaTradeTokens(address _router, address _baseAsset, address _token2, address _token3, address _token4, uint256 _amount, uint256 _startBalance, uint deadlineDeltaSec) internal {        
-        uint256 token3InitialBalance = IERC20(_token3).balanceOf(address(this));
-        uint256 token4InitialBalance = IERC20(_token4).balanceOf(address(this));
-        uint256 tradeableAmount2 = _instaTradeSwap(_router, _baseAsset, _token2, _amount, deadlineDeltaSec, IERC20(_token2).balanceOf(address(this)));
-        uint256 tradeableAmount3 = _instaTradeSwap(_router, _token2, _token3, tradeableAmount2, deadlineDeltaSec, token3InitialBalance);
-        uint256 tradeableAmount4 = _instaTradeSwap(_router, _token3, _token4, tradeableAmount3, deadlineDeltaSec, token4InitialBalance);
-        require(_instaTradeSwap(_router, _token4, _baseAsset, tradeableAmount4, deadlineDeltaSec, _startBalance) > 0, "Trade Reverted, No Profit Made");
-    }    
-
-    function _instaTradeSwap(        
-        address router,    
-        address from,
-        address to,
-        uint256 amount,
-        uint deadlineDeltaSec,
-        uint256 initialBalance
-    ) internal returns (uint256 tradeableAmount) {
-        _swapToken(router, tokenV3PoolsFee[from][to], from, to, amount, deadlineDeltaSec);
-        return IERC20(to).balanceOf(address(this)) - initialBalance;
-    }    
-
+    }   
+		
     // Allow the contract to receive Ether
     receive () external payable  {
     
