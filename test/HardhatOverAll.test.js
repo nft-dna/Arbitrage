@@ -48,7 +48,7 @@ describe("Overall Test", function () {
 	beforeEach(async function () {
 		[owner, addr1, addr2] = await ethers.getSigners();	
 		
-		const Trade = await ethers.getContractFactory("Trade");
+		const Trade = await ethers.getContractFactory("Trader");
 		Trader = await Trade.deploy();
 		await Trader.waitForDeployment();
 		Traderaddr = await Trader.getAddress();
