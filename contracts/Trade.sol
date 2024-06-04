@@ -92,18 +92,18 @@ contract Trade is Deposit {
             uint256 result = IQuoter(router).quoteExactInputSingle(_tokenIn, _tokenOut , poolfee, _amount, 0);
             return result;
         } else {
-            //uint256 result = 0;            
+            uint256 result = 0;            
             address[] memory path;
             path = new address[](2);
             path[0] = _tokenIn;
             path[1] = _tokenOut;            
-            //try IUniswapV2Router(router).getAmountsOut(_amount, path) returns (uint256[] memory amountOutMins) {
-            //    result = amountOutMins[path.length-1];
-            //} catch {
-            //}
-            //return result;      			
-			uint256[] memory amountOutMins = IUniswapV2Router(router).getAmountsOut(_amount, path);
-			return amountOutMins[path.length-1];      
+            try IUniswapV2Router(router).getAmountsOut(_amount, path) returns (uint256[] memory amountOutMins) {
+                result = amountOutMins[path.length-1];
+            } catch {
+            }
+            return result;      			
+		//uint256[] memory amountOutMins = IUniswapV2Router(router).getAmountsOut(_amount, path);
+		//return amountOutMins[path.length-1];         
         }
     }
 
