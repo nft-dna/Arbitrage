@@ -4,8 +4,7 @@ pragma solidity ^0.8.25;
 import "./../Interfaces.sol";
 
 contract MockDEX {
-    mapping(address => mapping(address => uint256)) public prices; // Mock prices for token pairs
-    mapping(address => mapping(address => uint24)) public fees;    // Mock fees for token pairs
+
     address payable OWNER;
 
     constructor() {
@@ -16,20 +15,48 @@ contract MockDEX {
         require(msg.sender == OWNER, "caller is not the owner!");
         _;
     }    
-
+	
     // Allow the contract to receive Ether
     receive () external payable  {    
-    }   
-
-    // Set mock price for a token pair
-    function setPrice(address tokenIn, address tokenOut, uint256 price) external onlyOwner {
-        prices[tokenIn][tokenOut] = price;
+    }   	
+	
+    struct PairInfo {
+        uint256 price; // Mock price (amount of tokenOut per 1 unit of tokenIn)
+        uint24 fee;    // Mock fee in basis points (e.g., 300 for 0.3%)
     }
 
-    // Set mock fee for a token pair
-    function setFee(address tokenIn, address tokenOut, uint24 fee) external onlyOwner {
-        fees[tokenIn][tokenOut] = fee;
+    function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
+        require(tokenA != tokenB, 'IDENTICAL_ADDRESSES');
+        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        require(token0 != address(0), 'ZERO_ADDRESS');
     }
+	
+    mapping(address => mapping(address => PairInfo)) public pairs; // Stores price and fee info for token pairs
+
+    // Set mock price and fee for a token pair
+    function setPairInfo(address tokenIn, address tokenOut, uint256 price, uint24 fee) external {
+		(address token0, address token1) = sortTokens(tokenIn, tokenOut);
+        pairs[token0][token1] = PairInfo(price, fee);
+    }
+
+    function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts) {
+        amounts = new uint[](path.length);
+        amounts[0] = amountIn;
+        
+        for (uint i = 0; i < path.length - 1; i++) {
+            address tokenIn = path[i];
+            address tokenOut = path[i + 1];
+            (address token0, address token1) = sortTokens(tokenIn, tokenOut);
+			PairInfo memory pinfo = pairs[token0][token1];
+            require(pinfo.price > 0, "Price not set");
+
+            uint256 amountOut = (amounts[i] * pinfo.price * (100000 - pinfo.fee)) / 100000; // Apply price and fee
+ 
+            amounts[i + 1] = amountOut;
+
+		}	
+	}
+
 
     // Mock Uniswap V2 swap
     function swapExactTokensForTokens(
@@ -47,11 +74,11 @@ contract MockDEX {
         for (uint i = 0; i < path.length - 1; i++) {
             address tokenIn = path[i];
             address tokenOut = path[i + 1];
-            uint256 price = prices[tokenIn][tokenOut];
-            require(price > 0, "Price not set");
+            (address token0, address token1) = sortTokens(tokenIn, tokenOut);
+			PairInfo memory pinfo = pairs[token0][token1];
+            require(pinfo.price > 0, "Price not set");
 
-            uint256 fee = fees[tokenIn][tokenOut];
-            uint256 amountOut = (amounts[i] * price * (10000 - fee)) / 10000; // Apply price and fee
+            uint256 amountOut = (amounts[i] * pinfo.price * (100000 - pinfo.fee)) / 100000; // Apply price and fee
             require(amountOut >= amountOutMin, "Insufficient output amount");
 
             amounts[i + 1] = amountOut;
@@ -77,11 +104,11 @@ contract MockDEX {
         for (uint i = 0; i < path.length - 1; i++) {
             address tokenIn = path[i];
             address tokenOut = path[i + 1];
-            uint256 price = prices[tokenIn][tokenOut];
-            require(price > 0, "Price not set");
+            (address token0, address token1) = sortTokens(tokenIn, tokenOut);
+			PairInfo memory pinfo = pairs[token0][token1];
+            require(pinfo.price > 0, "Price not set");
 
-            uint256 fee = fees[tokenIn][tokenOut];
-            uint256 amountOut = (amounts[i] * price * (10000 - fee)) / 10000; // Apply price and fee
+            uint256 amountOut = (amounts[i] * pinfo.price * (100000 - pinfo.fee)) / 100000; // Apply price and fee
             require(amountOut >= amountOutMin, "Insufficient output amount");
 
             amounts[i + 1] = amountOut;
@@ -112,11 +139,11 @@ contract MockDEX {
         for (uint i = path.length - 1; i > 0; i--) {
             address tokenIn = path[i - 1];
             address tokenOut = path[i];
-            uint256 price = prices[tokenIn][tokenOut];
-            require(price > 0, "Price not set");
+            (address token0, address token1) = sortTokens(tokenIn, tokenOut);
+			PairInfo memory pinfo = pairs[token0][token1];
+            require(pinfo.price > 0, "Price not set");
 
-            uint256 fee = fees[tokenIn][tokenOut];
-            uint256 amountIn = (amounts[i] * 10000) / (price * (10000 - fee)); // Apply price and fee
+            uint256 amountIn = (amounts[i] * 100000) / (pinfo.price * (100000 - pinfo.fee)); // Apply price and fee
             require(msg.value >= amountIn, "Insufficient input amount");
 
             amounts[i - 1] = amountIn;
@@ -143,11 +170,12 @@ contract MockDEX {
     ) external returns (uint256 ) {
         require(block.timestamp <= deadline, "Transaction expired");
 
-        uint256 price = prices[tokenIn][tokenOut];
-        require(price > 0, "Price not set");
+		(address token0, address token1) = sortTokens(tokenIn, tokenOut);
+		PairInfo memory pinfo = pairs[token0][token1];
+		require(pinfo.price > 0, "Price not set");
 
-        uint256 amountOut = (amountIn * price * (10000 - fee)) / 10000; // Apply price and fee
-        require(amountOut >= amountOutMin, "Insufficient output amount");
+        uint256 amountOut = (amountIn * pinfo.price * (100000 - /*pinfo.*/fee)) / 100000;
+        require(amountOut >= amountOutMin, "Insufficient output amount");		
 
         // Transfer tokens
         IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
@@ -155,20 +183,21 @@ contract MockDEX {
 
         return amountOut;
     }
-
+	
     // Mock Uniswap V3 quoteExactInputSingle
     function quoteExactInputSingle(
         address tokenIn,
         address tokenOut,
         uint24 fee,
         uint256 amountIn,
-        uint160 sqrtPriceLimitX96
+		uint160 sqrtPriceLimitX96
     ) external view returns (uint256 amountOut) {
-        uint256 price = prices[tokenIn][tokenOut];
-        require(price > 0, "Price not set");
+		(address token0, address token1) = sortTokens(tokenIn, tokenOut);
+		PairInfo memory pinfo = pairs[token0][token1];
+		require(pinfo.price > 0, "Price not set");
 
-        amountOut = (amountIn * price * (10000 - fee)) / 10000; // Apply price and fee
-    }
+        amountOut = (amountIn * pinfo.price * (100000 - /*pinfo.*/fee)) / 100000; // Apply price and fee		
+    }	
 
     // Allow the contract to receive tokens
     function depositToken(address token, uint256 amount) external onlyOwner {
