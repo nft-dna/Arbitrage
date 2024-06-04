@@ -18,9 +18,10 @@ async function getGasCosts(receipt) {
 
 describe("Overall Test", function () {	
 		
-	//let Trade;
+	let Trade;
+	let TradeAddr;
 	let Trader;
-	let Traderaddr;
+	let TraderAddr;
 	let MockDex;
 	let dex1;
 	let dex1addr;
@@ -48,10 +49,15 @@ describe("Overall Test", function () {
 	beforeEach(async function () {
 		[owner, addr1, addr2] = await ethers.getSigners();	
 		
-		const Trade = await ethers.getContractFactory("Trader");
-		Trader = await Trade.deploy();
+		const trade = await ethers.getContractFactory("Trade");
+		Trade = await trade.deploy();
+		await Trade.waitForDeployment();
+		TradeAddr = await Trade.getAddress();
+		
+		const trader = await ethers.getContractFactory("Trader");
+		Trader = await trader.deploy();
 		await Trader.waitForDeployment();
-		Traderaddr = await Trader.getAddress();
+		TraderAddr = await Trader.getAddress();
 		
 		MockDex = await ethers.getContractFactory("MockDEX");	
 		dex1 = await MockDex.deploy();
@@ -87,20 +93,20 @@ describe("Overall Test", function () {
 		  value: ethers.parseEther("3.0"),
 		});
 		
-		//tokenA.transfer(Traderaddr, initialDexReserve);
-		await tokenA.approve(Traderaddr, initialDexReserve);
-		await Trader.depositToken(tokenA, initialDexReserve);
-		//tokenB.transfer(Traderaddr, initialDexReserve);
-		await tokenB.approve(Traderaddr, initialDexReserve);
-		await Trader.depositToken(tokenB, initialDexReserve);		
-		//tokenC.transfer(Traderaddr, initialDexReserve);	
-		await tokenC.approve(Traderaddr, initialDexReserve);
-		await Trader.depositToken(tokenC, initialDexReserve);
+		//tokenA.transfer(TradeAddr, initialDexReserve);
+		await tokenA.approve(TradeAddr, initialDexReserve);
+		await Trade.depositToken(tokenA, initialDexReserve);
+		//tokenB.transfer(TradeAddr, initialDexReserve);
+		await tokenB.approve(TradeAddr, initialDexReserve);
+		await Trade.depositToken(tokenB, initialDexReserve);		
+		//tokenC.transfer(TradeAddr, initialDexReserve);	
+		await tokenC.approve(TradeAddr, initialDexReserve);
+		await Trade.depositToken(tokenC, initialDexReserve);
 		//await owner.sendTransaction({
-		//  to: Traderaddr,
+		//  to: TradeAddr,
 		//  value: ethers.parseEther("3.0"),
 		//});
-		await Trader.depositEther({value: ethers.parseEther("3.0")});
+		await Trade.depositEther({value: ethers.parseEther("3.0")});
 
 		await dex1.setPairInfo(tokenAaddr, tokenBaddr, initialPrice, initialFee);
 		await dex1.setPairInfo(tokenBaddr, tokenCaddr, initialPrice, initialFee);
@@ -127,13 +133,13 @@ describe("Overall Test", function () {
 	describe("DexSetup", async function () {
 	  it("Set Dex and Token references", async function () {
 		 
-		const availNative = await Trader.getEtherBalance();
+		const availNative = await Trade.getEtherBalance();
 		//console.log(availNative);
-		const availTokenA = await Trader.getTokenBalance(tokenAaddr);
+		const availTokenA = await Trade.getTokenBalance(tokenAaddr);
 		//console.log(availTokenA);
-		const availTokenB = await Trader.getTokenBalance(tokenBaddr);
+		const availTokenB = await Trade.getTokenBalance(tokenBaddr);
 		//console.log(availTokenB);
-		const availTokenC = await Trader.getTokenBalance(tokenCaddr);
+		const availTokenC = await Trade.getTokenBalance(tokenCaddr);
 		//console.log(availTokenC);
 
 		await Trader.AddDex([dex1addr, dex2addr], [/*DexInterfaceType.IUniswapV2Router*/0, /*DexInterfaceType.IUniswapV3Router*/1]);
