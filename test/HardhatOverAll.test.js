@@ -104,11 +104,15 @@ describe("Overall Test", function () {
 
 		await dex1.setPairInfo(tokenAaddr, tokenBaddr, initialPrice, initialFee);
 		await dex1.setPairInfo(tokenBaddr, tokenCaddr, initialPrice, initialFee);
-		await dex1.setPairInfo(tokenCaddr, tokenAaddr, initialPrice, initialFee);
+		await dex1.setPairInfo(tokenCaddr, tokenAaddr, initialPrice, initialFee);		
 
 		await dex2.setPairInfo(tokenAaddr, tokenBaddr, initialPrice, initialFee);
 		await dex2.setPairInfo(tokenBaddr, tokenCaddr, initialPrice, initialFee);
-		await dex2.setPairInfo(tokenCaddr, tokenAaddr, initialPrice, initialFee);		
+		await dex2.setPairInfo(tokenCaddr, tokenAaddr, initialPrice, initialFee);	
+
+		await dex1.setPairInfo(NATIVE_TOKEN, tokenAaddr, initialPrice, initialFee);
+		await dex1.setPairInfo(NATIVE_TOKEN, tokenBaddr, initialPrice, initialFee);
+		await dex1.setPairInfo(NATIVE_TOKEN, tokenCaddr, initialPrice, initialFee);
 	});
 		
 	describe("MockERC20", async function () {
@@ -144,8 +148,12 @@ describe("Overall Test", function () {
 		const estimateDex1 = await Trader.EstimateDualDexTrade(tokenAaddr, tokenBaddr, dex1addr, 0, dex2addr, initialFee, initialDexReserve);
 		expect(estimateDex1.toString()).to.be.equal(initialDexReserve.toString());
 		
-		//const estimateDex1Native = await Trader.EstimateDualDexTrade(NATIVE_TOKEN, tokenCaddr, dex1addr, 0, dex2addr, 3000, ethers.parseEther("0.1"));
-		//expect(estimateDex1Native.toString()).to.be.equal("0");		
+		await expect(
+		  Trader.EstimateDualDexTrade(NATIVE_TOKEN, tokenCaddr, dex1addr, 0, dex2addr, initialFee, initialDexReserve)
+		).to.be.revertedWith("Router does not support direct ETH swap");		
+		
+		const estimateDex1Native = await Trader.EstimateDualDexTrade(NATIVE_TOKEN, tokenCaddr, dex1addr, 0, dex1addr, 0, initialDexReserve);
+		expect(estimateDex1Native.toString()).to.be.equal(initialDexReserve.toString());	
 				
 		const searchDex1 = await Trader.CrossStableSearch(dex1addr, tokenAaddr, ethers.parseEther("0.05"));
 		expect(searchDex1[0].toString()).to.be.equal("0");
@@ -153,11 +161,12 @@ describe("Overall Test", function () {
 		expect(searchDex1[2].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
 		expect(searchDex1[3].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
 			
-		const estimateDex2 = await Trader.EstimateDualDexTrade(tokenAaddr, tokenBaddr, dex2addr, initialFee, dex1addr, 0, initialDexReserve);
-		expect(estimateDex2.toString()).to.be.equal(initialDexReserve.toString());		
-		
-		//const estimateDex2Native = await Trader.EstimateDualDexTrade(NATIVE_TOKEN, tokenCaddr, dex2addr, 0, dex1addr, 3000, ethers.parseEther("0.1"));
-		//expect(estimateDex2Native.toString()).to.be.equal("0");				
+		await expect(
+		  Trader.EstimateDualDexTrade(NATIVE_TOKEN, tokenCaddr, dex2addr, 0, dex1addr, 0, initialDexReserve)
+		).to.be.revertedWith("Router does not support direct ETH swap");		
+						
+		const estimateDex2Native = await Trader.EstimateDualDexTrade(NATIVE_TOKEN, tokenCaddr, dex1addr, 0, dex1addr, 0, initialDexReserve);
+		expect(estimateDex2Native.toString()).to.be.equal(initialDexReserve.toString());			
 		
 		const searchDex2 = await Trader.CrossStableSearch(dex2addr, tokenAaddr, ethers.parseEther("0.05"));
 		expect(searchDex2[0].toString()).to.be.equal("0");
