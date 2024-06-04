@@ -26,7 +26,7 @@ contract Trade is Deposit {
     function DualDexTrade(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount, uint deadlineDeltaSec) payable public {
         uint256 startBalance = 0;
 		if (NATIVE_TOKEN == _fromToken) {
-			if (msg.value >= 1000000) {
+			if (msg.value > 0) {
 				depositEtherSucceded(msg.sender, msg.value);
 			}
 			startBalance = address(this).balance;
