@@ -4,8 +4,21 @@ pragma solidity ^0.8.25;
 import "./Interfaces.sol";
 import "./Trade.sol";
 
-contract Trader is Trade {
+contract Trader {
 
+    // Addresses
+    address payable OWNER;
+    address NATIVE_TOKEN = address(0x0);	
+	
+    constructor() {
+        OWNER = payable(msg.sender);
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == OWNER, "caller is not the owner!");
+        _;
+    }
+	
     address[] public dexAddresses; // Array to store dex addresses
     mapping(address => DexInterfaceType) public dexInterface;    
 
