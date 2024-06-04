@@ -10,12 +10,17 @@ async function main(network) {
 	console.log("Deploying contracts with the account:", deployer.address);
 	console.log("Account balance:", await ethers.provider.getBalance(deployer));
 	
-	const Trade = await ethers.getContractFactory("Trader");
+	const Trade = await ethers.getContractFactory("Trade");
 	const trade = await Trade.deploy();
 	await trade.waitForDeployment();
 	const TRADE_ADDRESS = await trade.getAddress();
 	console.log("TRADE address:", TRADE_ADDRESS);	
-	
+
+	const Trader = await ethers.getContractFactory("Trader");
+	const trader = await Trader.deploy();
+	await trader.waitForDeployment();
+	const TRADER_ADDRESS = await trader.getAddress();
+	console.log("TRADER address:", TRADER_ADDRESS);		
 	
 	const MockDex = await ethers.getContractFactory("MockDEX");
 	
