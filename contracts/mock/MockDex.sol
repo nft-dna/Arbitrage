@@ -21,14 +21,16 @@ contract MockDEX {
     }   	
 	
     struct PairInfo {
-        uint256 price; // Mock price (amount of tokenOut per 1 unit of tokenIn)
-        uint24 fee;    // Mock fee in basis points (e.g., 300 for 0.3%)
+        uint256 price; // Mock price (amount of tokenOut per 1 unit of tokenIn in percentage points out of 100)
+						// i.e 100 = 1 tokenIn costs as 1 tokenOut
+						// i.e  50 = 1 tokenIn costs as half tokenOut		
+        uint24 fee;    // Mock fee in basis 100000 points (e.g., 300 for 0.3%)
     }
 
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
         require(tokenA != tokenB, 'IDENTICAL_ADDRESSES');
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), 'ZERO_ADDRESS');
+        //require(token0 != address(0), 'ZERO_ADDRESS');
     }
 	
     mapping(address => mapping(address => PairInfo)) public pairs; // Stores price and fee info for token pairs
@@ -50,7 +52,7 @@ contract MockDEX {
 			PairInfo memory pinfo = pairs[token0][token1];
             require(pinfo.price > 0, "Price not set");
 
-            uint256 amountOut = (amounts[i] * pinfo.price * (100000 - pinfo.fee)) / 100000; // Apply price and fee
+            uint256 amountOut = (((amounts[i] * pinfo.price) / 100) * (100000 - pinfo.fee)) / 100000; // Apply price and fee
  
             amounts[i + 1] = amountOut;
 
@@ -67,6 +69,7 @@ contract MockDEX {
         uint deadline
     ) external returns (uint[] memory amounts) {
         require(block.timestamp <= deadline, "Transaction expired");
+		require(path.length >= 2, "Invalid path");
 
         amounts = new uint[](path.length);
         amounts[0] = amountIn;
@@ -78,7 +81,7 @@ contract MockDEX {
 			PairInfo memory pinfo = pairs[token0][token1];
             require(pinfo.price > 0, "Price not set");
 
-            uint256 amountOut = (amounts[i] * pinfo.price * (100000 - pinfo.fee)) / 100000; // Apply price and fee
+            uint256 amountOut = (((amounts[i] * pinfo.price) / 100) * (100000 - pinfo.fee)) / 100000; // Apply price and fee
             require(amountOut >= amountOutMin, "Insufficient output amount");
 
             amounts[i + 1] = amountOut;
@@ -96,7 +99,7 @@ contract MockDEX {
         uint deadline
     ) external payable returns (uint[] memory amounts) {
         require(block.timestamp <= deadline, "Transaction expired");
-        require(path.length >= 2, "Invalid path");
+        require(path.length >= 1, "Invalid path");
 
         amounts = new uint[](path.length);
         amounts[0] = msg.value;
@@ -108,7 +111,7 @@ contract MockDEX {
 			PairInfo memory pinfo = pairs[token0][token1];
             require(pinfo.price > 0, "Price not set");
 
-            uint256 amountOut = (amounts[i] * pinfo.price * (100000 - pinfo.fee)) / 100000; // Apply price and fee
+            uint256 amountOut = (((amounts[i] * pinfo.price) / 100) * (100000 - pinfo.fee)) / 100000; // Apply price and fee
             require(amountOut >= amountOutMin, "Insufficient output amount");
 
             amounts[i + 1] = amountOut;
@@ -131,7 +134,7 @@ contract MockDEX {
         uint deadline
     ) external payable returns (uint[] memory amounts) {
         require(block.timestamp <= deadline, "Transaction expired");
-        require(path.length >= 2, "Invalid path");
+        require(path.length >= 1, "Invalid path");
 
         amounts = new uint[](path.length);
         amounts[path.length - 1] = amountOut;
@@ -143,7 +146,7 @@ contract MockDEX {
 			PairInfo memory pinfo = pairs[token0][token1];
             require(pinfo.price > 0, "Price not set");
 
-            uint256 amountIn = (amounts[i] * 100000) / (pinfo.price * (100000 - pinfo.fee)); // Apply price and fee
+            uint256 amountIn = (((amounts[i] * pinfo.price) / 100) * (100000 - pinfo.fee)) / 100000; // Apply price and fee
             require(msg.value >= amountIn, "Insufficient input amount");
 
             amounts[i - 1] = amountIn;
@@ -174,7 +177,7 @@ contract MockDEX {
 		PairInfo memory pinfo = pairs[token0][token1];
 		require(pinfo.price > 0, "Price not set");
 
-        uint256 amountOut = (amountIn * pinfo.price * (100000 - /*pinfo.*/fee)) / 100000;
+        uint256 amountOut = (((amountIn * pinfo.price) / 100) * (100000 - /*pinfo.*/fee)) / 100000; // Apply price and fee	
         require(amountOut >= amountOutMin, "Insufficient output amount");		
 
         // Transfer tokens
@@ -196,7 +199,7 @@ contract MockDEX {
 		PairInfo memory pinfo = pairs[token0][token1];
 		require(pinfo.price > 0, "Price not set");
 
-        amountOut = (amountIn * pinfo.price * (100000 - /*pinfo.*/fee)) / 100000; // Apply price and fee		
+        amountOut = (((amountIn * pinfo.price) / 100) * (100000 - /*pinfo.*/fee)) / 100000; // Apply price and fee	
     }	
 
     // Allow the contract to receive tokens

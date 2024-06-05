@@ -103,10 +103,12 @@ contract Trader {
         }
     }
 
-    function EstimateDualDexTrade(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount) external view returns (uint256) {
+    function EstimateDualDexTradeGain(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount) external view returns (uint256) {
         uint256 amtBack1 = GetAmountOutMin(_fromDex, _fromPoolFee, _fromToken, _toToken, _fromAmount);
         uint256 amtBack2 = GetAmountOutMin(_toDex, _toPoolFee, _toToken, _fromToken, amtBack1);
-        return amtBack2;
+		if (amtBack2 < _fromAmount)
+			return 0;
+        return amtBack2 - _fromAmount;
     }
   
 	
@@ -141,7 +143,7 @@ contract Trader {
 								if (amtBack > _amount && amtBack > maxAmtBack) {
 									maxAmtBack = amtBack;
 									token1 = tokens[i1];
-									token2 = tokens[i2];
+									token2 = stables[i2];
 									token3 = tokens[i3];
 								}
 							}

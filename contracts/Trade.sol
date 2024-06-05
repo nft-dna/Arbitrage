@@ -38,7 +38,6 @@ contract Trade is Deposit {
 		uint256 tokenBalance = IERC20(_toToken).balanceOf(address(this));
 		uint256 tradeableAmount = _tradeToken(_fromDex, _fromToken, _toToken, _fromPoolFee, _fromAmount, deadlineDeltaSec, tokenBalance);
 		tradeableAmount = _tradeToken(_toDex, _toToken, _fromToken, _toPoolFee, tradeableAmount, deadlineDeltaSec, startBalance);
-		require(tradeableAmount > 0, "End balance must exceed start balance.");
 		
 		if (NATIVE_TOKEN == _fromToken) {
 			depositEtherSucceded(msg.sender, tradeableAmount);
@@ -57,6 +56,7 @@ contract Trade is Deposit {
         uint deadlineDeltaSec,
         uint256 initialBalance
     ) internal returns (uint256 tradeableAmount) {
+		require(from != to);
 	
         _swapToken(router, poolFee, from, to, amount, deadlineDeltaSec);
 		
@@ -66,6 +66,7 @@ contract Trade is Deposit {
 		} else {
 			afterBalance = address(this).balance;
 		}
+		require(afterBalance > initialBalance, "Trade Reverted, No Profit Made");		
 		return afterBalance - initialBalance;
     }    
 	
@@ -151,7 +152,6 @@ contract Trade is Deposit {
 			tradeableAmount = _tradeToken(_routedata[i].router, _routedata[i].asset, _routedata[i+1].asset, _routedata[i].poolFee, tradeableAmount, deadlineDeltaSec, balance[i]);
 		}
 		tradeableAmount = _tradeToken(_routedata[i].router, _routedata[i].asset, _routedata[0].asset, _routedata[i].poolFee, tradeableAmount, deadlineDeltaSec, balance[i]);
-        require(tradeableAmount > 0, "Trade Reverted, No Profit Made");
 		return tradeableAmount;
     }
 		

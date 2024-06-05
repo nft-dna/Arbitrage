@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-/**
- * @dev Interface of the ERC20 standard as defined in the EIP. Does not include
- * the optional functions; to access them see `ERC20Detailed`.
- */
+
 interface IERC20 {
     function totalSupply() external view returns (uint256);
     function balanceOf(address account) external view returns (uint256);
@@ -18,10 +15,8 @@ interface IERC20 {
 
 
 enum DexInterfaceType {
-    //Unknown,
     IUniswapV2Router,
     IUniswapV3Router
-    //ISushiSwapRouter
 }
 
 interface IUniswapV2Router {
@@ -49,12 +44,3 @@ interface IUniswapV3Router {
 interface IQuoter {
     function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external view returns (uint256 amountOut);
 }
-/*
-interface ISushiSwapRouter {
-    function swapExactETHForTokens(uint amountOutMin,address[] calldata path,address to,uint deadline) external payable returns (uint[] memory amounts);
-    function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts);
-    function swapTokensForExactTokens(uint amountOut, uint amountInMax, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts);
-    function swapExactTokensForETH(uint amountIn,uint amountOutMin,address[] calldata path,address to,uint deadline) external returns (uint[] memory amounts);
-    function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts);
-}
-*/
