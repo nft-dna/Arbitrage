@@ -38,8 +38,8 @@ describe("Overall Test", function () {
 	let addr1;
 	let addr2;
 	let initialEthBalance = ethers.parseEther("3.0");
-	let initialSupply = 5000000;
-	let initialDexReserve = 1000000;
+	let initialSupply = ethers.parseEther("10.0"); //= 5000000;
+	let initialDexReserve = ethers.parseEther("1.0"); //= 1000000;
 	// Mock price (amount of tokenOut per 1 unit of tokenIn in percentage points out of 100)
 	// i.e 100 = 1 tokenIn costs as 1 tokenOut
 	// i.e  50 = 1 tokenIn costs as half tokenOut
@@ -47,28 +47,17 @@ describe("Overall Test", function () {
 	//fee: The fee tier of the pool (e.g., 500, 3000, 10000 for 0.05%, 0.3%, 1% respectively).	
 	let initialFee = 0;
 
-	const NATIVE_TOKEN = "0x0000000000000000000000000000000000000000";
+	let NATIVE_TOKEN;
+	let ZERO_ADDRESS = ethers.ZeroAddress;
   
 	beforeEach(async function () {
 		[owner, addr1, addr2] = await ethers.getSigners();	
 		
-		const trade = await ethers.getContractFactory("Trade");
-		Trade = await trade.deploy();
-		await Trade.waitForDeployment();
-		TradeAddr = await Trade.getAddress();
-		
-		const trader = await ethers.getContractFactory("Trader");
-		Trader = await trader.deploy();
-		await Trader.waitForDeployment();
-		TraderAddr = await Trader.getAddress();
-		
-		MockDex = await ethers.getContractFactory("MockDEX");	
-		dex1 = await MockDex.deploy();
-		await dex1.waitForDeployment();	
-		dex2 = await MockDex.deploy();
-		await dex2.waitForDeployment();
-		
+	
 		MockERC20 = await ethers.getContractFactory("MockERC20");
+		const weth = await MockERC20.deploy("NATIVE_TOKEN", "WETH", 18, initialSupply);
+		await weth.waitForDeployment();
+		NATIVE_TOKEN = await weth.getAddress();				
 		tokenA = await MockERC20.deploy("MockTokenA", "MTKA", 18, initialSupply);
 		await tokenA.waitForDeployment();
 		tokenAaddr = await tokenA.getAddress();
@@ -79,8 +68,24 @@ describe("Overall Test", function () {
 		await tokenC.waitForDeployment();	
 		tokenCaddr = await tokenC.getAddress();
 		
+		const trade = await ethers.getContractFactory("Trade");
+		Trade = await trade.deploy(NATIVE_TOKEN);
+		await Trade.waitForDeployment();
+		TradeAddr = await Trade.getAddress();
+		
+		const trader = await ethers.getContractFactory("Trader");
+		Trader = await trader.deploy(NATIVE_TOKEN);
+		await Trader.waitForDeployment();
+		TraderAddr = await Trader.getAddress();		
+		
+		MockDex = await ethers.getContractFactory("MockDEX");	
+		dex1 = await MockDex.deploy(NATIVE_TOKEN);
+		await dex1.waitForDeployment();	
+		dex2 = await MockDex.deploy(NATIVE_TOKEN);
+		await dex2.waitForDeployment();		
+		
 		dex1addr = await dex1.getAddress();
-		dex2addr = await dex2.getAddress();
+		dex2addr = await dex2.getAddress();		
 		await tokenA.transfer(dex1addr, initialDexReserve);
 		await tokenA.transfer(dex2addr, initialDexReserve);
 		await tokenB.transfer(dex1addr, initialDexReserve);
@@ -158,27 +163,27 @@ describe("Overall Test", function () {
 		expect(amtBack2.toString()).to.be.equal(initialDexReserve.toString());
 		const estimateDex1 = await Trader.EstimateDualDexTradeGain(tokenAaddr, tokenBaddr, dex1addr, 0, dex2addr, initialFee, initialDexReserve);
 		expect(estimateDex1.toString()).to.be.equal("0");
-		
+
 		await expect(
-		  Trader.EstimateDualDexTradeGain(NATIVE_TOKEN, tokenCaddr, dex1addr, 0, dex2addr, initialFee, initialDexReserve)
+		  Trader.EstimateDualDexTradeGain(ZERO_ADDRESS, tokenCaddr, dex1addr, 0, dex2addr, initialFee, initialDexReserve)
 		).to.be.revertedWith("Router does not support direct ETH swap");		
-		
-		const estimateDex1Native = await Trader.EstimateDualDexTradeGain(NATIVE_TOKEN, tokenCaddr, dex1addr, 0, dex1addr, 0, initialDexReserve);
+
+		const estimateDex1Native = await Trader.EstimateDualDexTradeGain(ZERO_ADDRESS, tokenCaddr, dex1addr, 0, dex1addr, 0, initialDexReserve);
 		expect(estimateDex1Native.toString()).to.be.equal("0");	
-				
+	
 		const searchDex1 = await Trader.CrossStableSearch(dex1addr, tokenAaddr, ethers.parseEther("0.05"));
 		expect(searchDex1[0].toString()).to.be.equal("0");
 		expect(searchDex1[1].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
 		expect(searchDex1[2].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
 		expect(searchDex1[3].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
-			
+	
 		await expect(
-		  Trader.EstimateDualDexTradeGain(NATIVE_TOKEN, tokenCaddr, dex2addr, 0, dex1addr, 0, initialDexReserve)
+		  Trader.EstimateDualDexTradeGain(ZERO_ADDRESS, tokenCaddr, dex2addr, 0, dex1addr, 0, initialDexReserve)
 		).to.be.revertedWith("Router does not support direct ETH swap");		
-						
-		const estimateDex2Native = await Trader.EstimateDualDexTradeGain(NATIVE_TOKEN, tokenCaddr, dex1addr, 0, dex1addr, 0, initialDexReserve);
+				
+		const estimateDex2Native = await Trader.EstimateDualDexTradeGain(ZERO_ADDRESS, tokenCaddr, dex1addr, 0, dex1addr, 0, initialDexReserve);
 		expect(estimateDex2Native.toString()).to.be.equal("0");			
-		
+
 		const searchDex2 = await Trader.CrossStableSearch(dex2addr, tokenAaddr, ethers.parseEther("0.05"));
 		expect(searchDex2[0].toString()).to.be.equal("0");
 		expect(searchDex2[1].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
@@ -253,7 +258,7 @@ describe("Overall Test", function () {
         });
 
         it("Should revert if token balance is insufficient", async function () {
-            await expect(Trade.withdrawToken(tokenAaddr, 2*initialDexReserve)).to.be.revertedWith("Insufficient token balance");
+            await expect(Trade.withdrawToken(tokenAaddr, BigInt(2)*initialDexReserve)).to.be.revertedWith("Insufficient token balance");
         });
     });
 	
@@ -285,10 +290,10 @@ describe("Overall Test", function () {
 			await tokenA.transfer(addr1, initialDexReserve);
 			await tokenA.connect(addr1).approve(TradeAddr, initialDexReserve);
 			await Trade.connect(addr1).depositToken(tokenAaddr, initialDexReserve);
-			expect(await Trade.connect(owner).getTotalTokenBalance(tokenAaddr)).to.equal(initialDexReserve*2);
+			expect(await Trade.connect(owner).getTotalTokenBalance(tokenAaddr)).to.equal(initialDexReserve*BigInt(2));
 			expect(await Trade.connect(owner).getTokenBalance(tokenAaddr)).to.equal(initialDexReserve);
 			expect(await Trade.connect(addr1).getTokenBalance(tokenAaddr)).to.equal(initialDexReserve);
-            await expect(Trade.connect(addr1).withdrawToken(tokenAaddr, initialDexReserve*2)).to.be.revertedWith("Insufficient token balance");
+            await expect(Trade.connect(addr1).withdrawToken(tokenAaddr, initialDexReserve*BigInt(2))).to.be.revertedWith("Insufficient token balance");
             await expect(Trade.connect(addr1).withdrawToken(tokenAaddr, initialDexReserve))
                 .to.emit(Trade, "WithdrawToken")
                 .withArgs(tokenAaddr, addr1.address, initialDexReserve);			
@@ -388,7 +393,8 @@ describe("Overall Test", function () {
 				).to.be.revertedWith("Trade Reverted, No Profit Made");
         });
 		
-        it("Should perform an Ether DualDexTrade (without payable call)", async function () {
+
+		it("Should perform an Ether DualDexTrade (without payable call)", async function () {
 
             // should already use the 'common' deposited amount
 			//await Trade.depositEther({ value: initialPrice });
@@ -399,12 +405,19 @@ describe("Overall Test", function () {
 			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
-			await dex2.setPairInfo(NATIVE_TOKEN, tokenAaddr, initialPrice/2, initialFee);
+			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, 2*initialPrice, initialFee);
+			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, initialFee);
 			const shouldGainAmount = initialEthBalance;
+					
+			const amtBack = await Trader.GetAmountOutMin(dex1addr, 0, ZERO_ADDRESS, tokenAaddr, initialEthBalance);
+			const finalEthBalance = await Trader.GetAmountOutMin(dex2addr, 0, tokenAaddr, ZERO_ADDRESS, amtBack);
+			expect(finalEthBalance).to.be.equal(initialEthBalance + shouldGainAmount);
 			
-			await expect(Trade.connect(addr1).DualDexTrade(NATIVE_TOKEN, tokenAaddr, dex1addr, initialFee, dex2addr, initialFee, initialEthBalance, 0))
+			await tokenA.transfer(dex1addr, amtBack);	
+			
+			await expect(Trade.connect(addr1).DualDexTrade(ZERO_ADDRESS, tokenAaddr, dex1addr, initialFee, dex2addr, initialFee, initialEthBalance, 0))
                 .to.emit(Trade, "DualDexTraded")
-                .withArgs(addr1.address, NATIVE_TOKEN, tokenAaddr, dex1addr, dex2addr, initialEthBalance, shouldGainAmount);			
+                .withArgs(addr1.address, ZERO_ADDRESS, tokenAaddr, dex1addr, dex2addr, initialEthBalance, shouldGainAmount);			
             
 			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
@@ -416,7 +429,7 @@ describe("Overall Test", function () {
 			expect(finalTotalBalance).to.be.above(finalBalance);
 			expect(finalTotalBalance).to.be.above(initialTotalBalance);			
         });
-		
+
         /*
 		it("Should perform an Ether DualDexTrade (with payable call)", async function () {
 

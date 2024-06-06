@@ -8,7 +8,7 @@ contract Trade is Deposit {
 
     // Addresses
     address payable OWNER;
-    address NATIVE_TOKEN = address(0x0);
+    address NATIVE_TOKEN;
 
     struct routeChain {
         address router;
@@ -19,13 +19,14 @@ contract Trade is Deposit {
     event DualDexTraded(address indexed trader, address indexed _fromToken, address indexed _toToken, address _fromDex, address _toDex, uint256 _fromAmount, uint256 _gainedAmount);
     event InstaTraded(address indexed trader, address indexed _baseAsset, routeChain[] _routeData, uint256 _fromAmount, uint256 _gainedAmount);
 
-    constructor() {
+    constructor(address native_token) {
         OWNER = payable(msg.sender);
+		NATIVE_TOKEN = native_token;
     }
   
     function DualDexTrade(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount, uint deadlineDeltaSec) payable public {
         uint256 startBalance = 0;
-		if (NATIVE_TOKEN == _fromToken) {
+		if (address(0x0) == _fromToken) {
 			if (msg.value > 0) {
 				depositEtherSucceded(msg.sender, msg.value);
 			}
@@ -39,7 +40,7 @@ contract Trade is Deposit {
 		uint256 tradeableAmount = _tradeToken(_fromDex, _fromToken, _toToken, _fromPoolFee, _fromAmount, deadlineDeltaSec, tokenBalance);
 		tradeableAmount = _tradeToken(_toDex, _toToken, _fromToken, _toPoolFee, tradeableAmount, deadlineDeltaSec, startBalance);
 		
-		if (NATIVE_TOKEN == _fromToken) {
+		if (address(0x0) == _fromToken) {
 			depositEtherSucceded(msg.sender, tradeableAmount);
 		} else {
 			depositTokenSucceded(msg.sender, _fromToken, tradeableAmount);
@@ -61,7 +62,7 @@ contract Trade is Deposit {
         _swapToken(router, poolFee, from, to, amount, deadlineDeltaSec);
 		
 		uint256 afterBalance = 0;
-		if (NATIVE_TOKEN != to) {
+		if (address(0x0) != to) {
 			afterBalance = IERC20(to).balanceOf(address(this));
 		} else {
 			afterBalance = address(this).balance;
@@ -72,12 +73,12 @@ contract Trade is Deposit {
 	
 	
     function _swapToken(address router, uint24 _poolFee, address _tokenIn, address _tokenOut, uint256 _amount, uint deadlineDeltaSec) private {
-		if (NATIVE_TOKEN != _tokenIn) {
+		if (address(0x0) != _tokenIn) {
 			IERC20(_tokenIn).approve(router, _amount);
 		}
         if (_poolFee > 0) {
-			require(NATIVE_TOKEN != _tokenIn, "Router does not support direct ETH swap");
-			require(NATIVE_TOKEN != _tokenOut, "Router does not support direct ETH swap");
+			require(address(0x0) != _tokenIn, "Router does not support direct ETH swap");
+			require(address(0x0) != _tokenOut, "Router does not support direct ETH swap");
 			if (_poolFee == 100000) {
 				_poolFee = 0;
 			}		
@@ -92,20 +93,19 @@ contract Trade is Deposit {
             );           
             IUniswapV3Router(router).exactInputSingle(params);
         } else {
-			uint deadline = block.timestamp + deadlineDeltaSec;            
-			if (NATIVE_TOKEN == _tokenIn) {
-				address[] memory path = new address[](1);
-				path[0] = _tokenOut;			
+			uint deadline = block.timestamp + deadlineDeltaSec;  
+			address[] memory path;
+			path = new address[](2);
+			path[0] = _tokenIn;
+			path[1] = _tokenOut;			
+			if (address(0x0) == _tokenIn) {
+				path[0] = NATIVE_TOKEN;			
 				IUniswapV2Router(router).swapExactETHForTokens{value: _amount}(_amount, path, address(this), block.timestamp + deadlineDeltaSec);
-			} else if (NATIVE_TOKEN == _tokenIn) {
-				address[] memory path = new address[](1);
-				path[0] = _tokenIn;			
+			} else if (address(0x0) == _tokenOut) {
+				path[1] = NATIVE_TOKEN;			
 				IUniswapV2Router(router).swapExactTokensForETH(_amount, 0, path, address(this), block.timestamp + deadlineDeltaSec);
 			} else {
-				address[] memory path;
-				path = new address[](2);
-				path[0] = _tokenIn;
-				path[1] = _tokenOut;
+
 				IUniswapV2Router(router).swapExactTokensForTokens(_amount, 0, path, address(this), deadline);    
 			}
         }
@@ -115,7 +115,7 @@ contract Trade is Deposit {
 		require ( _routedata.length > 1, "Invalid param");
         
         uint256 startBalance = 0;
-		if (NATIVE_TOKEN == _routedata[0].asset) {
+		if (address(0x0) == _routedata[0].asset) {
 			if (msg.value > 0) {
 				depositEtherSucceded(msg.sender, msg.value);
 			}
@@ -127,7 +127,7 @@ contract Trade is Deposit {
         }
 	
 		uint256 gainedAmount = _instaTradeTokens(_routedata, _startAmount, startBalance, deadlineDeltaSec);			
-		if (NATIVE_TOKEN == _routedata[0].asset) {
+		if (address(0x0) == _routedata[0].asset) {
 			depositEtherSucceded(msg.sender, gainedAmount);
 		} else {
 			depositTokenSucceded(msg.sender, _routedata[0].asset, gainedAmount);
@@ -138,7 +138,7 @@ contract Trade is Deposit {
     function _instaTradeTokens(routeChain[] calldata _routedata, uint256 _amount, uint256 _startBalance, uint deadlineDeltaSec) internal returns (uint256 gainedAmount) {
 		uint256[] memory balance = new uint256[](_routedata.length);
 		for (uint b=1; b < _routedata.length; b++) {
-			if (NATIVE_TOKEN == _routedata[b].asset) {
+			if (address(0x0) == _routedata[b].asset) {
 				balance[b-1] = address(this).balance;
 			} else {
 				balance[b-1] = (IERC20(_routedata[b].asset).balanceOf(address(this)));

@@ -8,10 +8,11 @@ contract Trader {
 
     // Addresses
     address payable OWNER;
-    address NATIVE_TOKEN = address(0x0);	
+    address NATIVE_TOKEN;	
 	
-    constructor() {
+    constructor(address native_token) {
         OWNER = payable(msg.sender);
+		NATIVE_TOKEN = native_token;
     }
 
     modifier onlyOwner() {
@@ -30,7 +31,7 @@ contract Trader {
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
         require(tokenA != tokenB, 'IDENTICAL_ADDRESSES');
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        //require(token0 != address(0), 'ZERO_ADDRESS');
+        require(token0 != address(0), 'ZERO_ADDRESS');
     }	
 
     function AddTestTokens(address[] calldata _tokens) external onlyOwner {
@@ -80,8 +81,8 @@ contract Trader {
 
     function GetAmountOutMin(address _router, uint24 _poolfee, address _tokenIn, address _tokenOut, uint256 _amount) public view returns (uint256 ) {
         if (dexInterface[_router] == DexInterfaceType.IUniswapV3Router || _poolfee > 0) {
-			require(NATIVE_TOKEN != _tokenIn, "Router does not support direct ETH swap");
-			require(NATIVE_TOKEN != _tokenOut, "Router does not support direct ETH swap");
+			require(address(0x0) != _tokenIn, "Router does not support direct ETH swap");
+			require(address(0x0) != _tokenOut, "Router does not support direct ETH swap");
 			if (_poolfee >= 100000) {
 				_poolfee = 0;
 			}
@@ -91,8 +92,8 @@ contract Trader {
             //uint256 result = 0;            
             address[] memory path;
             path = new address[](2);
-            path[0] = _tokenIn;
-            path[1] = _tokenOut;            
+            path[0] = _tokenIn == address(0x0) ? NATIVE_TOKEN : _tokenIn;
+            path[1] = _tokenOut == address(0x0) ? NATIVE_TOKEN : _tokenOut;            
             //try IUniswapV2Router(_router).getAmountsOut(_amount, path) returns (uint256[] memory amountOutMins) {
             //    result = amountOutMins[path.length-1];
             //} catch {
