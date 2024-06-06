@@ -25,7 +25,8 @@ contract Trade is Deposit {
     }
   
     function DualDexTrade(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount, uint deadlineDeltaSec) payable public {
-        uint256 startBalance = 0;
+        require(_fromDex != _toDex, "Same Dex");
+		uint256 startBalance = 0;
 		if (address(0x0) == _fromToken) {
 			if (msg.value > 0) {
 				depositEtherSucceded(msg.sender, msg.value);
@@ -76,23 +77,51 @@ contract Trade is Deposit {
 		if (address(0x0) != _tokenIn) {
 			IERC20(_tokenIn).approve(router, _amount);
 		}
-        if (_poolFee > 0) {
+		if (_poolFee > 100000) {
+			// V4
+			require(address(0x0) != _tokenIn, "Direct ETH swap, not implemented here yet");
+			require(address(0x0) != _tokenOut, "Direct ETH swap, not implemented here yet");			
+			if (_poolFee != 0x800000) { // dynamic fee
+				_poolFee = _poolFee - 100000;
+				if (_poolFee == 100000) {
+					_poolFee = 0;
+				}
+			}
+			// experimental..
+			IPoolManager.PoolKey memory pool = IPoolManager.PoolKey({
+				currency0: /*Currency*/(_tokenIn < _tokenOut ? _tokenIn : _tokenOut),
+				currency1: /*Currency*/(_tokenIn < _tokenOut ? _tokenOut : _tokenIn),
+				fee: _poolFee,
+				tickSpacing: 60,
+				hooks: /*IHooks*/(address(0))
+			});			
+			IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
+				zeroForOne: _tokenIn < _tokenOut,
+				amountSpecified: int256(_amount),
+				sqrtPriceLimitX96: _tokenIn < _tokenOut ? MIN_PRICE_LIMIT : MAX_PRICE_LIMIT // unlimited impact
+			});
+			bytes memory hookData = new bytes(0); // no hook data on the hookless pool
+			//PoolSwapTest.TestSettings memory testSettings = PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
+			//PoolSwapTest.TestSettings memory testSettings = PoolSwapTest.TestSettings({withdrawTokens: true, settleUsingTransfer: true});
+			IPoolManager(router).swap(pool, params, /*testSettings,*/ hookData);		
+		} else if (_poolFee > 0) {
+		// V3
 			require(address(0x0) != _tokenIn, "Router does not support direct ETH swap");
 			require(address(0x0) != _tokenOut, "Router does not support direct ETH swap");
 			if (_poolFee == 100000) {
 				_poolFee = 0;
-			}		
-            bytes memory params = abi.encode(
-                _tokenIn,
-                _tokenOut,
-                _poolFee,
-                address(this),
-                _amount,
-                0,
-                0
-            );           
+			}			
+			ExactInputSingleParams memory params;
+			params.tokenIn = _tokenIn;
+			params.tokenOut = _tokenOut;
+			params.fee = _poolFee;
+			params.recipient = address(this);
+			params.amountIn = _amount;
+			params.amountOutMinimum = 0;
+			params.sqrtPriceLimitX96 = 0;
             IUniswapV3Router(router).exactInputSingle(params);
         } else {
+		// V2
 			uint deadline = block.timestamp + deadlineDeltaSec;  
 			address[] memory path;
 			path = new address[](2);
@@ -100,7 +129,7 @@ contract Trade is Deposit {
 			path[1] = _tokenOut;			
 			if (address(0x0) == _tokenIn) {
 				path[0] = NATIVE_TOKEN;			
-				IUniswapV2Router(router).swapExactETHForTokens{value: _amount}(_amount, path, address(this), block.timestamp + deadlineDeltaSec);
+				IUniswapV2Router(router).swapExactETHForTokens{value: _amount}(0, path, address(this), block.timestamp + deadlineDeltaSec);
 			} else if (address(0x0) == _tokenOut) {
 				path[1] = NATIVE_TOKEN;			
 				IUniswapV2Router(router).swapExactTokensForETH(_amount, 0, path, address(this), block.timestamp + deadlineDeltaSec);

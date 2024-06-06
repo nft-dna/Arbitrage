@@ -4,6 +4,110 @@ pragma solidity ^0.8.25;
 import "./Interfaces.sol";
 import "./Trade.sol";
 
+/*
+
+	UniswapV2			Factory Contract Address					V2Router02 Contract Address
+	Mainnet				0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f	0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
+	Ethereum Sepolia	0xB7f907f7A9eBC822a80BD25E224be42Ce0A698A0	0x425141165d3DE9FEC831896C016617a52363b687
+	Arbitrum			0xf1D7CC64Fb4452F05c498126312eBE29f30Fbcf9	0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24
+	Avalanche			0x9e5A52f57b3038F1B8EeE45F28b3C1967e22799C	0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24
+	BNB Chain			0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6	0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24
+	Base				0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6	0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24
+	Optimism			0x0c3c1c532F1e39EdF36BE9Fe0bE1410313E074Bf	0x4A7b5Da61326A6379179b40d00F57E5bbDC962c2
+	Polygon				0x9e5A52f57b3038F1B8EeE45F28b3C1967e22799C	0xedf6066a2b290C185783862C7F4776A2C8077AD1
+	Blast				0x5C346464d33F90bABaf70dB6388507CC889C1070	0xBB66Eb1c5e875933D44DAe661dbD80e5D9B03035
+
+	UniswapV3	Mainnet, Polygon, Optimism, Arbitrum, Testnets Address
+	UniswapV3Factory	0x1F98431c8aD98523631AE4a59f267346ea31F984
+	Multicall2			0x5BA1e12693Dc8F9c48aAD8770482f4739bEeD696
+	ProxyAdmin			0xB753548F6E010e7e680BA186F9Ca1BdAB2E90cf2
+	TickLens			0xbfd8137f7d1516D3ea5cA83523914859ec47F573
+	Quoter				0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6
+	SwapRouter			0xE592427A0AEce92De3Edee1F18E0157C05861564
+	NFTDescriptor		0x42B24A95702b9986e82d421cC3568932790A48Ec
+	NonfungibleTokenPositionDescriptor	0x91ae842A5Ffd8d12023116943e72A606179294f3
+	TransparentUpgradeableProxy		0xEe6A57eC80ea46401049E92587E52f5Ec1c24785
+	NonfungiblePositionManager		0xC36442b4a4522E871399CD717aBDD847Ab11FE88
+	V3Migrator			0xA5644E29708357803b5A882D272c41cC0dF92B34
+
+	UniswapV3	Celo Address
+	UniswapV3Factory	0xAfE208a311B21f13EF87E33A90049fC17A7acDEc
+	Multicall2			0x633987602DE5C4F337e3DbF265303A1080324204
+	ProxyAdmin			0xc1b262Dd7643D4B7cA9e51631bBd900a564BF49A
+	TickLens			0x5f115D9113F88e0a0Db1b5033D90D4a9690AcD3D
+	Quoter				0x82825d0554fA07f7FC52Ab63c961F330fdEFa8E8
+	SwapRouter			0x5615CDAb10dc425a742d643d949a7F474C01abc4
+	NFTDescriptor		0xa9Fd765d85938D278cb0b108DbE4BF7186831186
+	NonfungibleTokenPositionDescriptor	0x644023b316bB65175C347DE903B60a756F6dd554
+	TransparentUpgradeableProxy		0x505B43c452AA4443e0a6B84bb37771494633Fde9
+	NonfungiblePositionManager		0x3d79EdAaBC0EaB6F08ED885C05Fc0B014290D95A
+	V3Migrator			0x3cFd4d48EDfDCC53D3f173F596f621064614C582
+	
+	UniswapV4	Sepolia
+	| Contract               | Address                                
+	|------------------------|--------------------------------------------
+	| PoolManager            | 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 
+	| PoolSwapTest           | 0x0165878A594ca255338adfa4d48449f69242Eb8F 
+	| PoolModifyPositionTest | 0x5FC8d32690cc91D4c39d9d3abcBD16989F875707 
+	| PoolDonateTest         | 0xa513E6E4b8f2a923D98304ec87F64353C4D5C853 
+
+	WETH
+	Mainnet
+	Ethereum Mainnet 0xC02aaA39b223FE8D0A0e5C4F27ead9083C756Cc2
+	Arbitrum Mainnet 0x82af49447d8a07e3bd95bd0d56f35241523fbab1
+	Optimism Mainnet 0x4200000000000000000000000000000000000006
+	Polygon (Matic) Mainnet 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619
+	BSC (Binance Smart Chain) Mainnet 0x2170ed0880ac9a755fd29b2688956bd959f933f8
+	Avalanche Mainnet: 0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB
+	Fantom Mainnet 0x74b23882a30290451a17c44f4f05243b6b58c76d
+	Testnets
+	Ethereum Goerli Testnet 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6
+	Ethereum Sepolia Testnet 0xC778417E063141139Fce010982780140Aa0cD5Ab
+	Arbitrum Goerli Testnet 0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3
+	Optimism Goerli Testnet 0x4200000000000000000000000000000000000006
+	Polygon Mumbai Testnet 0xDfd5eC59A2F15b56fA139F5D44C11f4C8f869b60
+	
+	
+	Polygon
+	UniswapV3	0xE592427A0AEce92De3Edee1F18E0157C05861564	0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6
+	v2
+	UniswapV2	0xedf6066a2b290C185783862C7F4776A2C8077AD1
+	Quickswap	0xa5E0829CaCED8fFDD4De3c43696c57F7D7A678ff
+	SushiSwap	0x1b02da8cb0d097eb8d57a175b88c7d8b47997506
+	Dfyn		0xA102072A4C07F06EC3B4900FDC4C7B80b6c57429
+	KyberSwap	0x546C79662E028B661Dfb4767664d0273184E4dD1
+	other
+	**Balancer	0xBA12222222228d8Ba445958a75a0704d566BF2C8	IBalancerVault { struct SwapReques
+	
+	WETH		0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619
+	USDC		0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174
+	USDT		0xC2132D05D31c914A87C6611C10748aEB04B58e8F
+	DAI			0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063
+	TUSD		0x2e1AD108fF1D8C782fcBbB89AAd783aC49586756
+	BUSD		0xa8d394fe7380b8ce6145d5f85e6ac22d4e91acde		
+	
+	
+	Ethereum
+	UniswapV3	0xE592427A0AEce92De3Edee1F18E0157C05861564	0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6
+	v2
+	UniswapV2	0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
+	SushiSwap	0xd9e1CE17f2641F24aE83637ab66a2cca9C378B9F
+	KyberSwap	0x7a250d5630b4cf539739df2c5dacaebc00c26ac0
+	Curve		0x8e764bE4288B842791989DB5b8ec067279829809
+	1inch		0x1111111254EEB25477B68fb85Ed929f73A960582
+	other
+	**Balancer	0xBA12222222228d8Ba445958a75a0704d566BF2C8	IBalancerVault { struct SwapReques
+	**Bancor	0x8eE7D9235e01e6B42345120b5d270bDB763624C7	IBancorNetwork { function convert(
+	
+	WETH		0xC02aaA39b223FE8D0A0e5C4F27ead9083C756Cc2
+	USDC		0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606EB48
+	USDT		0xdAC17F958D2ee523a2206206994597C13D831ec7
+	DAI			0x6B175474E89094C44Da98b954EedeAC495271d0F
+	BUSD		0x4fabb145d64652a948d72533023f6e7a623c7c53
+	TUSD		0x0000000000085d4780B73119b644AE5ecd22b376
+	
+*/
+
 contract Trader {
 
     // Addresses
@@ -21,7 +125,8 @@ contract Trader {
     }
 	
     address[] public dexAddresses; // Array to store dex addresses
-    mapping(address => DexInterfaceType) public dexInterface;    
+    mapping(address => DexInterfaceType) public dexInterface;
+	mapping(address => address) public v3quoters;    
 
     address [] public tokens;
     address [] public stables;
@@ -65,13 +170,15 @@ contract Trader {
         return false;
     }
 
-    function AddDex(address[] calldata  _dex, DexInterfaceType[] calldata  _interface) public onlyOwner {
+    function AddDex(address[] calldata  _dex, DexInterfaceType[] calldata  _interface, address[] calldata  _dexQuoter) public onlyOwner {
         require ( _dex.length == _interface.length, "Invalid param");
         for (uint i=0; i<_dex.length; i++) {
             if (!IsDexAdded(_dex[i])) {
                 dexAddresses.push(_dex[i]);
             }
             dexInterface[_dex[i]] = _interface[i];
+			if (_dexQuoter[i] != address(0))
+				v3quoters[_dex[i]] = _dexQuoter[i];
         }
     }
 
@@ -86,7 +193,7 @@ contract Trader {
 			if (_poolfee >= 100000) {
 				_poolfee = 0;
 			}
-            uint256 result = IQuoter(_router).quoteExactInputSingle(_tokenIn, _tokenOut , _poolfee, _amount, 0);
+            uint256 result = IQuoter(v3quoters[_router]).quoteExactInputSingle(_tokenIn, _tokenOut , _poolfee, _amount, 0);
             return result;
         } else {
             //uint256 result = 0;            

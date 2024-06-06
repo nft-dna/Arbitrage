@@ -44,11 +44,13 @@ contract MockDEX {
     }
 	
     function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts) {
+		require(path.length >= 2, "Invalid path");
         amounts = new uint[](path.length);
         amounts[0] = amountIn;
         
         for (uint i = 0; i < path.length - 1; i++) {
             address tokenIn = path[i];
+			require(i + 1 < path.length, "Invalid path");		
             address tokenOut = path[i + 1];
             (address token0, address token1) = sortTokens(tokenIn, tokenOut);
 			PairInfo memory pinfo = pairs[token0][token1];
@@ -60,7 +62,6 @@ contract MockDEX {
 
 		}	
 	}
-
 
     // Mock Uniswap V2 swap
     function swapExactTokensForTokens(
@@ -78,20 +79,19 @@ contract MockDEX {
         
         for (uint i = 0; i < path.length - 1; i++) {
             address tokenIn = path[i];
+			require(i + 1 < path.length, "Invalid path");			
             address tokenOut = path[i + 1];
             (address token0, address token1) = sortTokens(tokenIn, tokenOut);
 			PairInfo memory pinfo = pairs[token0][token1];
             require(pinfo.price > 0, "Price not set");
 
-            uint256 amountOut = (((amounts[i] * pinfo.price) / 100) * (100000 - pinfo.fee)) / 100000; // Apply price and fee
-            require(amountOut >= amountOutMin, "Insufficient output amount");
-
+            uint256 amountOut = (((amounts[i] * pinfo.price) / 100) * (100000 - pinfo.fee)) / 100000; // Apply price and fee			
             amounts[i + 1] = amountOut;
-
-            // Transfer tokens
-            IERC20(tokenIn).transferFrom(msg.sender, address(this), amounts[i]);
-            IERC20(tokenOut).transfer(to, amountOut);
         }
+        // Transfer tokens
+		require(amounts[path.length - 1] >= amountOutMin, "Insufficient output amount");
+        IERC20(path[0]).transferFrom(msg.sender, address(this), amounts[0]);
+        IERC20(path[path.length - 1]).transfer(to, amounts[path.length - 1]);		
     }
     // Mock Uniswap V2 swapExactETHForTokens
     function swapExactETHForTokens(
@@ -114,57 +114,13 @@ contract MockDEX {
 			PairInfo memory pinfo = pairs[token0][token1];
             require(pinfo.price > 0, "Price not set");
 
-            uint256 amountOut = (((amounts[i] * pinfo.price) / 100) * (100000 - pinfo.fee)) / 100000; // Apply price and fee
-            require(amountOut >= amountOutMin, "Insufficient output amount");
-
+            uint256 amountOut = (((amounts[i] * pinfo.price) / 100) * (100000 - pinfo.fee)) / 100000; // Apply price and fee	
             amounts[i + 1] = amountOut;
-
-            // Transfer tokens
-            IERC20(tokenOut).transfer(to, amountOut);
         }
 
-        // Refund excess ETH
-        if (msg.value > amounts[path.length - 1]) {
-            payable(msg.sender).transfer(msg.value - amounts[path.length - 1]);
-        }
+		require(amounts[path.length - 1] >= amountOutMin, "Insufficient output amount");
+        IERC20(path[path.length - 1]).transfer(to, amounts[path.length - 1]);		
     }
-
-    // Mock Uniswap V2 swapETHForExactTokens
-    function swapETHForExactTokens(
-        uint amountOut,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external payable returns (uint[] memory amounts) {
-        require(block.timestamp <= deadline, "Transaction expired");
-        require(path.length >= 2, "Invalid path");
-		require(path[path.length - 1] == NATIVE_TOKEN, "Invalid token");		
-
-        amounts = new uint[](path.length);
-        amounts[path.length - 1] = amountOut;
-
-        for (uint i = path.length - 1; i > 0; i--) {
-            address tokenIn = path[i - 1];
-            address tokenOut = path[i];
-            (address token0, address token1) = sortTokens(tokenIn, tokenOut);
-			PairInfo memory pinfo = pairs[token0][token1];
-            require(pinfo.price > 0, "Price not set");
-
-            uint256 amountIn = (((amounts[i] * pinfo.price) / 100) * (100000 - pinfo.fee)) / 100000; // Apply price and fee
-            require(msg.value >= amountIn, "Insufficient input amount");
-
-            amounts[i - 1] = amountIn;
-
-            // Transfer eth
-            //IERC20(tokenOut).transfer(to, amountOut);
-			payable(to).transfer(amountOut);
-        }
-
-        // Refund excess ETH
-        if (msg.value > amounts[0]) {
-            payable(msg.sender).transfer(msg.value - amounts[0]);
-        }
-    }    
 
     // Mock Uniswap V2 swapExactTokensForETH
     function swapExactTokensForETH(
@@ -173,61 +129,45 @@ contract MockDEX {
         address[] calldata path,
         address to,
         uint deadline
-    ) external payable returns (uint[] memory amounts) {
+    ) external returns (uint[] memory amounts) {
         require(block.timestamp <= deadline, "Transaction expired");
         require(path.length >= 2, "Invalid path");
 		require(path[path.length - 1] == NATIVE_TOKEN, "Invalid token");		
 
         amounts = new uint[](path.length);
-        amounts[0] = msg.value;
+        amounts[0] = amountIn;
 
-        for (uint i = path.length - 1; i > 0; i--) {
-            address tokenIn = path[i - 1];
-            address tokenOut = path[i];
+        for (uint i = 0; i < path.length - 1; i++) {
+            address tokenIn = path[i];
+            address tokenOut = path[i + 1];
             (address token0, address token1) = sortTokens(tokenIn, tokenOut);
 			PairInfo memory pinfo = pairs[token0][token1];
             require(pinfo.price > 0, "Price not set");
 
-            uint256 amountOut = (((amounts[i] * pinfo.price) / 100) * (100000 - pinfo.fee)) / 100000; // Apply price and fee			
-            require(amountOut >= amountOutMin, "Insufficient output amount");
-
-            amounts[i - 1] = amountIn;
-
-            // Transfer eth
-            //IERC20(tokenOut).transfer(to, amountOut);
-			payable(to).transfer(amountOut);
+            uint256 amountOut = (((amounts[i] * pinfo.price) / 100) * (100000 - pinfo.fee)) / 100000; // Apply price and fee
+            amounts[i + 1] = amountOut;
         }
-
-        // Refund excess ETH
-        if (msg.value > amounts[0]) {
-            payable(msg.sender).transfer(msg.value - amounts[0]);
-        }
+		
+		require(amounts[path.length - 1] >= amountOutMin, "Insufficient output amount");
+		IERC20(path[0]).transferFrom(msg.sender, address(this), amounts[0]);
+        payable(to).transfer(amounts[path.length - 1]);	
     }    	
 
-    // Mock Uniswap V3 swap
-    function exactInputSingle(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address tokenIn,
-        address tokenOut,
-        uint24 fee,
-        address recipient,
-        uint256 deadline
-    ) external returns (uint256 ) {
-        require(block.timestamp <= deadline, "Transaction expired");
 
-		(address token0, address token1) = sortTokens(tokenIn, tokenOut);
+    // Mock Uniswap V3 swap
+    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut) {	
+
+		(address token0, address token1) = sortTokens(params.tokenIn, params.tokenOut);
 		PairInfo memory pinfo = pairs[token0][token1];
 		require(pinfo.price > 0, "Price not set");
 
-        uint256 amountOut = (((amountIn * pinfo.price) / 100) * (100000 - /*pinfo.*/fee)) / 100000; // Apply price and fee	
-        require(amountOut >= amountOutMin, "Insufficient output amount");		
+        amountOut = (((params.amountIn * pinfo.price) / 100) * (100000 - /*pinfo.*/params.fee)) / 100000; // Apply price and fee	
+        require(amountOut >= params.amountOutMinimum, "Insufficient output amount");		
 
         // Transfer tokens
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
-        IERC20(tokenOut).transfer(recipient, amountOut);
+        IERC20(params.tokenIn).transferFrom(msg.sender, address(this), params.amountIn);
+        IERC20(params.tokenOut).transfer(params.recipient, amountOut);
 
-        return amountOut;
     }
 	
     // Mock Uniswap V3 quoteExactInputSingle
@@ -244,6 +184,20 @@ contract MockDEX {
 
         amountOut = (((amountIn * pinfo.price) / 100) * (100000 - /*pinfo.*/fee)) / 100000; // Apply price and fee	
     }	
+	
+	// Mock Uniswap V4
+    function swap(IPoolManager.PoolKey memory key, IPoolManager.SwapParams memory params, bytes calldata hookData) external returns (/*BalanceDelta*/int256) {
+		PairInfo memory pinfo = pairs[key.currency0][key.currency1];
+		require(pinfo.price > 0, "Price not set");
+
+        int256 amountOut = int256((((uint256(params.amountSpecified) * pinfo.price) / 100) * (100000 - key.fee)) / 100000); // Apply price and fee		
+		
+        IERC20(params.zeroForOne ? key.currency0 : key.currency1).transferFrom(msg.sender, address(this), uint256(params.amountSpecified));
+        IERC20(params.zeroForOne ? key.currency1 : key.currency0).transfer(msg.sender, uint256(amountOut));
+		
+		return amountOut;
+	}
+	
 
     // Allow the contract to receive tokens
     function depositToken(address token, uint256 amount) external onlyOwner {
