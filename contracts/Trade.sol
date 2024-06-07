@@ -87,10 +87,10 @@ contract Trade is Deposit {
 			path[1] = _tokenOut;			
 			if (address(0x0) == _tokenIn) {
 				path[0] = NATIVE_TOKEN;			
-				IUniswapV2Router(routeTo.router).swapExactETHForTokens{value: _amountIn}(0, path, address(this), block.timestamp + deadlineDeltaSec);
+				IUniswapV2Router(routeTo.router).swapExactETHForTokens{value: _amountIn}(0, path, address(this), deadline);
 			} else if (address(0x0) == _tokenOut) {
 				path[1] = NATIVE_TOKEN;			
-				IUniswapV2Router(routeTo.router).swapExactTokensForETH(_amountIn, 0, path, address(this), block.timestamp + deadlineDeltaSec);
+				IUniswapV2Router(routeTo.router).swapExactTokensForETH(_amountIn, 0, path, address(this), deadline);
 			} else {
 
 				IUniswapV2Router(routeTo.router).swapExactTokensForTokens(_amountIn, 0, path, address(this), deadline);    
