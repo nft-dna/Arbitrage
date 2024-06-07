@@ -13,12 +13,19 @@ interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
-
 enum DexInterfaceType {
-    IUniswapV2Router,
-    IUniswapV3Router,
+	IUniswapV2Router,
+	IUniswapV3Router,
 	IUniswapV4PoolManager
 }
+
+struct routeChain {
+	DexInterfaceType Itype;
+	address router;
+	address asset;
+	uint24 poolFee;
+	int24 tickSpacing;
+}		
 
 
 // UniswapV2

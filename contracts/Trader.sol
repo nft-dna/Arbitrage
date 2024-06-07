@@ -186,34 +186,36 @@ contract Trader {
         return dexAddresses.length;
     }
 
-    function GetAmountOutMin(address _router, uint24 _poolfee, address _tokenIn, address _tokenOut, uint256 _amount) public view returns (uint256 ) {
-        if (dexInterface[_router] == DexInterfaceType.IUniswapV3Router || _poolfee > 0) {
+    function GetAmountOutMin(routeChain memory _routedata, address _tokenOut, uint256 _amountIn) public view returns (uint256 ) {
+        address _tokenIn = _routedata.asset;
+		if (_routedata.Itype == DexInterfaceType.IUniswapV4PoolManager) {
+			require(_routedata.Itype != DexInterfaceType.IUniswapV4PoolManager, "not implemented here yet");
+			return 0;
+		} else if (_routedata.Itype == DexInterfaceType.IUniswapV3Router) {
 			require(address(0x0) != _tokenIn, "Router does not support direct ETH swap");
 			require(address(0x0) != _tokenOut, "Router does not support direct ETH swap");
-			if (_poolfee >= 100000) {
-				_poolfee = 0;
-			}
-            uint256 result = IQuoter(v3quoters[_router]).quoteExactInputSingle(_tokenIn, _tokenOut , _poolfee, _amount, 0);
+            uint256 result = IQuoter(v3quoters[_routedata.router]).quoteExactInputSingle(_tokenIn, _tokenOut ,_routedata.poolFee, _amountIn, 0);
             return result;
-        } else {
+        } else { // DexInterfaceType.IUniswapV2Router
             //uint256 result = 0;            
             address[] memory path;
             path = new address[](2);
             path[0] = _tokenIn == address(0x0) ? NATIVE_TOKEN : _tokenIn;
             path[1] = _tokenOut == address(0x0) ? NATIVE_TOKEN : _tokenOut;            
-            //try IUniswapV2Router(_router).getAmountsOut(_amount, path) returns (uint256[] memory amountOutMins) {
+            //try IUniswapV2Router(_router).getAmountsOut(_amountIn, path) returns (uint256[] memory amountOutMins) {
             //    result = amountOutMins[path.length-1];
             //} catch {
             //}
             //return result;      			
-			uint256[] memory amountOutMins = IUniswapV2Router(_router).getAmountsOut(_amount, path);
+			uint256[] memory amountOutMins = IUniswapV2Router(_routedata.router).getAmountsOut(_amountIn, path);
 			return amountOutMins[path.length-1];      
         }
     }
 
-    function EstimateDualDexTradeGain(address _fromToken, address _toToken, address _fromDex, uint24 _fromPoolFee, address _toDex, uint24 _toPoolFee, uint256 _fromAmount) external view returns (uint256) {
-        uint256 amtBack1 = GetAmountOutMin(_fromDex, _fromPoolFee, _fromToken, _toToken, _fromAmount);
-        uint256 amtBack2 = GetAmountOutMin(_toDex, _toPoolFee, _toToken, _fromToken, amtBack1);
+    function EstimateDualDexTradeGain(routeChain[] calldata _routedata, uint256 _fromAmount) external view returns (uint256) {
+		require ( _routedata.length == 2, "Invalid param");
+        uint256 amtBack1 = GetAmountOutMin(_routedata[0], _routedata[1].asset, _fromAmount);
+        uint256 amtBack2 = GetAmountOutMin(_routedata[1], _routedata[0].asset, amtBack1);
 		if (amtBack2 < _fromAmount)
 			return 0;
         return amtBack2 - _fromAmount;
@@ -221,17 +223,18 @@ contract Trader {
   
 	
     function AmountBack(
-        address router,
-        address baseAsset,
-        uint256 amount,
-        address token1,
-        address token2,
-        address token3
+        routeChain[] memory _routedata,
+        uint256 amountIn
     ) internal view returns (uint256) {
-        uint256 amtBack = GetAmountOutMin(router, getTestV3PoolFee(router, baseAsset, token1), baseAsset, token1, amount);
-        amtBack = GetAmountOutMin(router, getTestV3PoolFee(router, token1, token2), token1, token2, amtBack);
-        amtBack = GetAmountOutMin(router, getTestV3PoolFee(router, token2, token3), token2, token3, amtBack);
-        amtBack = GetAmountOutMin(router, getTestV3PoolFee(router, token3, baseAsset), token3, baseAsset, amtBack);
+		require ( _routedata.length == 4, "Invalid param");
+		_routedata[0].poolFee = getTestV3PoolFee(_routedata[0].router, _routedata[0].asset, _routedata[1].asset);
+        uint256 amtBack = GetAmountOutMin(_routedata[0], _routedata[1].asset, amountIn);
+		_routedata[1].poolFee = getTestV3PoolFee(_routedata[1].router, _routedata[1].asset, _routedata[2].asset);
+        amtBack = GetAmountOutMin(_routedata[1], _routedata[2].asset, amtBack);
+		_routedata[2].poolFee = getTestV3PoolFee(_routedata[2].router, _routedata[2].asset, _routedata[3].asset);
+        amtBack = GetAmountOutMin(_routedata[2], _routedata[3].asset, amtBack);
+		_routedata[3].poolFee = getTestV3PoolFee(_routedata[3].router, _routedata[3].asset, _routedata[0].asset);
+        amtBack = GetAmountOutMin(_routedata[3], _routedata[0].asset, amtBack);
         return amtBack;
     }
 
@@ -247,7 +250,17 @@ contract Trader {
 					for (uint i2=0; i2<stables.length; i2++) {
 						for (uint i3=0; i3<tokens.length; i3++) {
 							if (_baseAsset != tokens[i3]) {
-								uint256 amtBack = AmountBack(_router, _baseAsset, _amount, tokens[i1], stables[i2], tokens[i3]);
+								routeChain[] memory _routedata;
+								_routedata = new routeChain[](4);
+								_routedata[0].router = _router;	
+								_routedata[0].asset = _baseAsset;
+								_routedata[1].router = _router;	
+								_routedata[1].asset = tokens[i1];	
+								_routedata[2].router = _router;	
+								_routedata[2].asset = stables[i2];	
+								_routedata[3].router = _router;	
+								_routedata[3].asset = tokens[i3];	
+								uint256 amtBack = AmountBack(_routedata, _amount);
 								if (amtBack > _amount && amtBack > maxAmtBack) {
 									maxAmtBack = amtBack;
 									token1 = tokens[i1];
