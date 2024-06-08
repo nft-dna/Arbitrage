@@ -15,7 +15,8 @@ interface IERC20 {
 
 enum DexInterfaceType {
 	IUniswapV2Router,
-	IUniswapV3Router,
+	IUniswapV3RouterQuoter01,
+	IUniswapV3RouterQuoter02,
 	IUniswapV4PoolManager
 }
 
@@ -30,7 +31,8 @@ struct routeChain {
 
 // UniswapV2
 
-interface IUniswapV2Router {
+interface IUniswapV2Router0102 {
+	function WETH() external pure returns (address);
     function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts);
     function swapExactTokensForETH(uint amountIn,uint amountOutMin,address[] calldata path,address to,uint deadline) external returns (uint[] memory amounts);
     function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts);
@@ -50,18 +52,34 @@ interface IUniswapV3Factory {
     function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool);
 }
 
-struct ExactInputSingleParams {
-	address tokenIn;
-	address tokenOut;
-	uint24 fee;
-	address recipient;
-	uint256 amountIn;
-	uint256 amountOutMinimum;
-	uint160 sqrtPriceLimitX96;
-}
 
 interface IUniswapV3Router {
-	function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
+    struct ExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
+        address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+        uint160 sqrtPriceLimitX96;
+    }
+	function exactInputSingle(IUniswapV3Router.ExactInputSingleParams calldata params) external returns (uint256 amountOut);
+}
+
+interface IUniswapV3Quoter01 {
+    function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external view returns (uint256 amountOut);
+}
+
+interface IUniswapV3Quoter02 {
+	struct QuoteExactInputSingleParams {
+		address tokenIn;
+		address tokenOut;
+		uint24 fee;
+		uint256 amountIn;
+		uint160 sqrtPriceLimitX96;
+	}
+	function quoteExactInputSingle(IUniswapV3Quoter02.QuoteExactInputSingleParams calldata params) external view returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate);
 }
 
 // UniswapV4
@@ -77,7 +95,7 @@ uint160 constant MAX_SQRT_PRICE = 1461446703485210103287273052203988822378723970
 uint160 constant MIN_PRICE_LIMIT = MIN_SQRT_PRICE + 1;
 uint160 constant MAX_PRICE_LIMIT = MAX_SQRT_PRICE - 1;
 
-interface IPoolManager {
+interface IUniswapV4PoolManager {
 
 	struct PoolKey {
 		/// @notice The lower currency of the pool, sorted numerically
@@ -101,12 +119,9 @@ interface IPoolManager {
     function swap(PoolKey memory key, SwapParams memory params, bytes calldata hookData) external returns (/*BalanceDelta*/int256);
 }
 
-interface IQuoter {
-	// V3
-    function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external view returns (uint256 amountOut);
-    // V4
+interface IUniswapV4QuoterV4 {
 	struct QuoteExactSingleParams {
-		IPoolManager.PoolKey poolKey;
+		IUniswapV4PoolManager.PoolKey poolKey;
 		bool zeroForOne;
 		address recipient;
 		uint128 exactAmount;

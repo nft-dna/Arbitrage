@@ -155,7 +155,7 @@ contract MockDEX {
 
 
     // Mock Uniswap V3 swap
-    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut) {	
+    function exactInputSingle(IUniswapV3Router.ExactInputSingleParams calldata params) external payable returns (uint256 amountOut) {	
 
 		(address token0, address token1) = sortTokens(params.tokenIn, params.tokenOut);
 		PairInfo memory pinfo = pairs[token0][token1];
@@ -186,7 +186,7 @@ contract MockDEX {
     }	
 	
 	// Mock Uniswap V4
-    function swap(IPoolManager.PoolKey memory key, IPoolManager.SwapParams memory params, bytes calldata hookData) external returns (/*BalanceDelta*/int256) {
+    function swap(IUniswapV4PoolManager.PoolKey memory key, IUniswapV4PoolManager.SwapParams memory params, bytes calldata hookData) external returns (/*BalanceDelta*/int256) {
 		PairInfo memory pinfo = pairs[key.currency0][key.currency1];
 		require(pinfo.price > 0, "Price not set");
 

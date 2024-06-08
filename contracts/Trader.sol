@@ -227,11 +227,22 @@ contract Trader {
 		if (_routedata.Itype == DexInterfaceType.IUniswapV4PoolManager) {
 			require(_routedata.Itype != DexInterfaceType.IUniswapV4PoolManager, "not implemented here yet");
 			return 0;
-		} else if (_routedata.Itype == DexInterfaceType.IUniswapV3Router) {
+		} else if (_routedata.Itype == DexInterfaceType.IUniswapV3RouterQuoter02) {
 			require(address(0x0) != _tokenIn, "Router does not support direct ETH swap");
 			require(address(0x0) != _tokenOut, "Router does not support direct ETH swap");
-            uint256 result = IQuoter(v3quoters[_routedata.router]).quoteExactInputSingle(_tokenIn, _tokenOut ,_routedata.poolFee, _amountIn, 0);
-            return result;
+			IUniswapV3Quoter02.QuoteExactInputSingleParams memory params;
+			params.tokenIn = _tokenIn;
+			params.tokenOut = _tokenOut;
+			params.fee = _routedata.poolFee;
+			params.amountIn = _amountIn;
+			params.sqrtPriceLimitX96 = MAX_PRICE_LIMIT;
+			(uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate) = IUniswapV3Quoter02(v3quoters[_routedata.router]).quoteExactInputSingle(params);
+            return amountOut;
+        }  else if (_routedata.Itype == DexInterfaceType.IUniswapV3RouterQuoter01) {
+			require(address(0x0) != _tokenIn, "Router does not support direct ETH swap");
+			require(address(0x0) != _tokenOut, "Router does not support direct ETH swap");
+			uint256 amountOut = IUniswapV3Quoter01(v3quoters[_routedata.router]).quoteExactInputSingle(_tokenIn, _tokenOut, _routedata.poolFee, _amountIn, MAX_PRICE_LIMIT);
+            return amountOut;
         } else { // DexInterfaceType.IUniswapV2Router
             //uint256 result = 0;            
             address[] memory path;
@@ -243,7 +254,7 @@ contract Trader {
             //} catch {
             //}
             //return result;      			
-			uint256[] memory amountOutMins = IUniswapV2Router(_routedata.router).getAmountsOut(_amountIn, path);
+			uint256[] memory amountOutMins = IUniswapV2Router0102(_routedata.router).getAmountsOut(_amountIn, path);
 			return amountOutMins[path.length-1];      
         }
     }

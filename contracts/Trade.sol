@@ -38,6 +38,15 @@ contract Trade is Deposit {
 		return afterBalance - initialBalance;
     }    
 	
+	function NativeTOKEN(DexInterfaceType Itype, address router) private returns (address) {
+		if (Itype == DexInterfaceType.IUniswapV2Router) {
+            try IUniswapV2Router0102(router).WETH() returns (address weth) {
+                return weth;
+            } catch {
+            }
+		}
+		return NATIVE_TOKEN;
+	}
 	
     function _swapToken( routeChain calldata routeTo, address _tokenOut, uint256 _amountIn, uint deadlineDeltaSec) private {
 		address _tokenIn = routeTo.asset;	
@@ -49,14 +58,14 @@ contract Trade is Deposit {
 			require(address(0x0) != _tokenOut, "Direct ETH swap, not implemented here yet");			
 			// routeTo.poolFee == 0x800000 // dynamic fee
 			// experimental..
-			IPoolManager.PoolKey memory pool = IPoolManager.PoolKey({
+			IUniswapV4PoolManager.PoolKey memory pool = IUniswapV4PoolManager.PoolKey({
 				currency0: /*Currency*/(_tokenIn < _tokenOut ? _tokenIn : _tokenOut),
 				currency1: /*Currency*/(_tokenIn < _tokenOut ? _tokenOut : _tokenIn),
 				fee: routeTo.poolFee,
 				tickSpacing: routeTo.tickSpacing,
 				hooks: /*IHooks*/(address(0))
 			});			
-			IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
+			IUniswapV4PoolManager.SwapParams memory params = IUniswapV4PoolManager.SwapParams({
 				zeroForOne: _tokenIn < _tokenOut,
 				amountSpecified: int256(_amountIn),
 				sqrtPriceLimitX96: _tokenIn < _tokenOut ? MIN_PRICE_LIMIT : MAX_PRICE_LIMIT // unlimited impact
@@ -64,12 +73,12 @@ contract Trade is Deposit {
 			bytes memory hookData = new bytes(0); // no hook data on the hookless pool
 			//PoolSwapTest.TestSettings memory testSettings = PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
 			//PoolSwapTest.TestSettings memory testSettings = PoolSwapTest.TestSettings({withdrawTokens: true, settleUsingTransfer: true});
-			IPoolManager(routeTo.router).swap(pool, params, /*testSettings,*/ hookData);		
-		} else if (routeTo.Itype == DexInterfaceType.IUniswapV3Router) {
+			IUniswapV4PoolManager(routeTo.router).swap(pool, params, /*testSettings,*/ hookData);		
+		} else if (routeTo.Itype == DexInterfaceType.IUniswapV3RouterQuoter01 || routeTo.Itype == DexInterfaceType.IUniswapV3RouterQuoter02) {
 		// V3
 			require(address(0x0) != _tokenIn, "Router does not support direct ETH swap");
 			require(address(0x0) != _tokenOut, "Router does not support direct ETH swap");
-			ExactInputSingleParams memory params;
+			IUniswapV3Router.ExactInputSingleParams memory params;
 			params.tokenIn = _tokenIn;
 			params.tokenOut = _tokenOut;
 			params.fee = routeTo.poolFee;
@@ -78,7 +87,12 @@ contract Trade is Deposit {
 			params.amountOutMinimum = 0;
 			params.sqrtPriceLimitX96 = MAX_PRICE_LIMIT;
             IUniswapV3Router(routeTo.router).exactInputSingle(params);
-        } else { // DexInterfaceType.IUniswapV2Router
+		}/*else if (routeTo.Itype == DexInterfaceType.IUniswapV3Router01) {
+		// V3
+			require(address(0x0) != _tokenIn, "Router does not support direct ETH swap");
+			require(address(0x0) != _tokenOut, "Router does not support direct ETH swap");
+            IUniswapV3Router01(routeTo.router).exactInputSingle(_tokenIn, _tokenOut, routeTo.poolFee, address(this), _amountIn, 0, MAX_PRICE_LIMIT);
+        }*/ else { // DexInterfaceType.IUniswapV2Router
 		// V2
 			uint deadline = block.timestamp + deadlineDeltaSec;  
 			address[] memory path;
@@ -86,14 +100,13 @@ contract Trade is Deposit {
 			path[0] = _tokenIn;
 			path[1] = _tokenOut;			
 			if (address(0x0) == _tokenIn) {
-				path[0] = NATIVE_TOKEN;			
-				IUniswapV2Router(routeTo.router).swapExactETHForTokens{value: _amountIn}(0, path, address(this), deadline);
+				path[0] = NativeTOKEN(routeTo.Itype, routeTo.router);			
+				IUniswapV2Router0102(routeTo.router).swapExactETHForTokens{value: _amountIn}(0, path, address(this), deadline);
 			} else if (address(0x0) == _tokenOut) {
-				path[1] = NATIVE_TOKEN;			
-				IUniswapV2Router(routeTo.router).swapExactTokensForETH(_amountIn, 0, path, address(this), deadline);
+				path[1] = NativeTOKEN(routeTo.Itype, routeTo.router);			
+				IUniswapV2Router0102(routeTo.router).swapExactTokensForETH(_amountIn, 0, path, address(this), deadline);
 			} else {
-
-				IUniswapV2Router(routeTo.router).swapExactTokensForTokens(_amountIn, 0, path, address(this), deadline);    
+				IUniswapV2Router0102(routeTo.router).swapExactTokensForTokens(_amountIn, 0, path, address(this), deadline);    
 			}
         }
     }    

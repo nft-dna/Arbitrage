@@ -49,8 +49,9 @@ describe("Overall Test", function () {
 	//fee: The fee tier of the pool (e.g., 500, 3000, 10000 for 0.05%, 0.3%, 1% respectively).	
 	let poolFee	= 0; // 3000;
 	let IU_V2_POOL = 0	
-	let IU_V3_POOL = 1
-	let IU_V4_POOL = 2
+	let IU_V3_Q1_POOL = 1
+	let IU_V3_Q2_POOL = 2	
+	let IU_V4_POOL = 3
   
 	beforeEach(async function () {
 		[owner, addr1, addr2] = await ethers.getSigners();	
@@ -154,7 +155,7 @@ describe("Overall Test", function () {
 		const availTokenC = await Trade.getTokenBalance(tokenCaddr);
 		//console.log(availTokenC);
 
-		await Trader.AddDex([dex1addr, dex2addr], [IU_V2_POOL, IU_V3_POOL],[dex1addr, dex2addr]);
+		await Trader.AddDex([dex1addr, dex2addr], [IU_V2_POOL, IU_V3_Q1_POOL],[dex1addr, dex2addr]);
 		await Trader.AddTestTokens([tokenAaddr, tokenBaddr]);
 		await Trader.AddTestStables([tokenCaddr]);
 		await Trader.AddTestV3PoolFee(dex2addr, tokenAaddr, tokenBaddr, poolFee);
@@ -162,19 +163,19 @@ describe("Overall Test", function () {
 		const route1 = { Itype: IU_V2_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 		const amtBack1 = await Trader.GetAmountOutMin(route1, tokenBaddr, initialDexReserve);
 		expect(amtBack1.toString()).to.be.equal(initialDexReserve.toString());
-		const route2 = { Itype: IU_V3_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }		
+		const route2 = { Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }		
         const amtBack2 = await Trader.GetAmountOutMin(route2, tokenAaddr, initialDexReserve);
 		expect(amtBack2.toString()).to.be.equal(initialDexReserve.toString());
 		const routeData1 = [
 			{ Itype: IU_V2_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 },
-			{ Itype: IU_V3_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }
+			{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }
 		]		
 		const estimateDex1 = await Trader.EstimateDualDexTradeGain(routeData1, initialDexReserve);
 		expect(estimateDex1.toString()).to.be.equal("0");
 
 		const routeData2 = [
 			{ Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 },
-			{ Itype: IU_V3_POOL, router: dex2addr, asset: tokenCaddr, poolFee: poolFee, tickSpacing: 0 }
+			{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenCaddr, poolFee: poolFee, tickSpacing: 0 }
 		]	
 		await expect(
 		  Trader.EstimateDualDexTradeGain(routeData2, initialDexReserve)
@@ -194,7 +195,7 @@ describe("Overall Test", function () {
 		expect(searchDex1[3].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
 	
 		const routeData4 = [
-			{ Itype: IU_V3_POOL, router: dex2addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 },
+			{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 },
 			{ Itype: IU_V2_POOL, router: dex1addr, asset: tokenCaddr, poolFee: poolFee, tickSpacing: 0 }
 		]			
 		await expect(
@@ -612,8 +613,8 @@ describe("Overall Test", function () {
 			const shouldGainAmount = initialDexReserve;
 			
 			const routeData1 = [
-				{ Itype: IU_V3_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
-				{ Itype: IU_V3_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
+				{ Itype: IU_V3_Q1_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
+				{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]						
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0))
                 //.to.emit(Trade, "InstaTraded")
@@ -643,8 +644,8 @@ describe("Overall Test", function () {
 			const shouldGainAmount = initialDexReserve;
 			
 			const routeData1 = [
-				{ Itype: IU_V3_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 },
-				{ Itype: IU_V3_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }
+				{ Itype: IU_V3_Q1_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 },
+				{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }
 			]					
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0)
 				).to.be.revertedWith("Trade Reverted, No Profit Made");
@@ -653,8 +654,8 @@ describe("Overall Test", function () {
         it("Should revert a V3-V3 token InstaTradeTokens with 0 gain", async function () {
 			
 			const routeData1 = [
-				{ Itype: IU_V3_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
-				{ Itype: IU_V3_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
+				{ Itype: IU_V3_Q1_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
+				{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]				
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0)
 				).to.be.revertedWith("Trade Reverted, No Profit Made");
@@ -675,7 +676,7 @@ describe("Overall Test", function () {
 			const shouldGainAmount = initialDexReserve;
 			
 			const routeData1 = [
-				{ Itype: IU_V3_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
+				{ Itype: IU_V3_Q1_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
 				{ Itype: IU_V2_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]				
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0))
@@ -706,7 +707,7 @@ describe("Overall Test", function () {
 			const shouldGainAmount = initialDexReserve;
 			
 			const routeData1 = [
-				{ Itype: IU_V3_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 },
+				{ Itype: IU_V3_Q1_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 },
 				{ Itype: IU_V2_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }
 			]		            
 			await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0)
@@ -716,7 +717,7 @@ describe("Overall Test", function () {
         it("Should revert a V3-V2 token InstaTradeTokens with 0 gain", async function () {
 			
 			const routeData1 = [
-				{ Itype: IU_V3_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
+				{ Itype: IU_V3_Q1_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
 				{ Itype: IU_V2_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]				
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0)
@@ -739,7 +740,7 @@ describe("Overall Test", function () {
 			
 			const routeData1 = [
 				{ Itype: IU_V2_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
-				{ Itype: IU_V3_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
+				{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]				
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0))
                 //.to.emit(Trade, "InstaTraded")
@@ -770,7 +771,7 @@ describe("Overall Test", function () {
 			
 			const routeData1 = [
 				{ Itype: IU_V2_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 },
-				{ Itype: IU_V3_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }
+				{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }
 			]				
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0)
 				).to.be.revertedWith("Trade Reverted, No Profit Made");
@@ -780,7 +781,7 @@ describe("Overall Test", function () {
 			
 			const routeData1 = [
 				{ Itype: IU_V2_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
-				{ Itype: IU_V3_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
+				{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]				
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0)
 				).to.be.revertedWith("Trade Reverted, No Profit Made");
@@ -868,7 +869,7 @@ describe("Overall Test", function () {
 			
 			const routeData1 = [
 				{ Itype: IU_V4_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
-				{ Itype: IU_V3_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
+				{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]				
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0))
                 //.to.emit(Trade, "InstaTraded")
@@ -899,7 +900,7 @@ describe("Overall Test", function () {
 			
 			const routeData1 = [
 				{ Itype: IU_V4_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 },
-				{ Itype: IU_V3_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }
+				{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }
 			]			
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0)
 				).to.be.revertedWith("Trade Reverted, No Profit Made");
@@ -909,7 +910,7 @@ describe("Overall Test", function () {
 			
 			const routeData1 = [
 				{ Itype: IU_V4_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
-				{ Itype: IU_V3_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
+				{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]				
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0)
 				).to.be.revertedWith("Trade Reverted, No Profit Made");
@@ -930,7 +931,7 @@ describe("Overall Test", function () {
 			const shouldGainAmount = initialDexReserve;
 			
 			const routeData1 = [
-				{ Itype: IU_V3_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
+				{ Itype: IU_V3_Q1_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
 				{ Itype: IU_V4_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]					
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0))
@@ -961,7 +962,7 @@ describe("Overall Test", function () {
 			const shouldGainAmount = initialDexReserve;
 			
 			const routeData1 = [
-				{ Itype: IU_V3_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
+				{ Itype: IU_V3_Q1_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
 				{ Itype: IU_V4_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]				
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0)
@@ -971,7 +972,7 @@ describe("Overall Test", function () {
         it("Should revert a V3-V4 token InstaTradeTokens with 0 gain", async function () {
 			
 			const routeData1 = [
-				{ Itype: IU_V3_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
+				{ Itype: IU_V3_Q1_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 },
 				{ Itype: IU_V4_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]			
             await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialDexReserve, 0)
@@ -1356,7 +1357,7 @@ describe("Overall Test", function () {
 			
             const routeData = [
                 { Itype: IU_V2_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0  },
-                { Itype: IU_V3_POOL, router: dex2addr, asset: tokenCaddr, poolFee: poolFee, tickSpacing: 0  },
+                { Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenCaddr, poolFee: poolFee, tickSpacing: 0  },
                 { Itype: IU_V4_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0  }
             ]
 			await expect(Trade.connect(addr1).InstaTradeTokens(routeData, initialDexReserve, 0))
@@ -1391,7 +1392,7 @@ describe("Overall Test", function () {
 			
             const routeData = [
                 { Itype: IU_V2_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0  },
-                { Itype: IU_V3_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0  },
+                { Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0  },
                 { Itype: IU_V4_POOL, router: dex2addr, asset: tokenCaddr, poolFee: poolFee, tickSpacing: 0  }
             ]
 			await expect(Trade.connect(addr1).InstaTradeTokens(routeData, initialDexReserve, 0)
@@ -1403,7 +1404,7 @@ describe("Overall Test", function () {
 			
             const routeData = [
                 { Itype: IU_V2_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0  },
-                { Itype: IU_V3_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0  },
+                { Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0  },
                 { Itype: IU_V4_POOL, router: dex2addr, asset: tokenCaddr, poolFee: poolFee, tickSpacing: 0  }
             ]
 			await expect(Trade.connect(addr1).InstaTradeTokens(routeData, initialDexReserve, 0)
