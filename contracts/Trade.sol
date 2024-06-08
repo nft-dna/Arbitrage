@@ -44,6 +44,11 @@ contract Trade is Deposit {
                 return weth;
             } catch {
             }
+		} else if (Itype == DexInterfaceType.IUniswapV3RouterQuoter01 || Itype == DexInterfaceType.IUniswapV3RouterQuoter02) {
+            try IUniswapV3Router(router).WETH9() returns (address weth) {
+                return weth;
+            } catch {
+            }
 		}
 		return NATIVE_TOKEN;
 	}

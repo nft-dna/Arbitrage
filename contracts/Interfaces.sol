@@ -64,6 +64,7 @@ interface IUniswapV3Router {
         uint256 amountOutMinimum;
         uint160 sqrtPriceLimitX96;
     }
+	function WETH9() external pure returns (address);
 	function exactInputSingle(IUniswapV3Router.ExactInputSingleParams calldata params) external returns (uint256 amountOut);
 }
 
@@ -79,6 +80,7 @@ interface IUniswapV3Quoter02 {
 		uint256 amountIn;
 		uint160 sqrtPriceLimitX96;
 	}
+	function WETH9() external pure returns (address);	
 	function quoteExactInputSingle(IUniswapV3Quoter02.QuoteExactInputSingleParams calldata params) external view returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate);
 }
 
