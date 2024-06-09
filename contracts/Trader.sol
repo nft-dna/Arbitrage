@@ -222,7 +222,7 @@ contract Trader {
         return dexAddresses.length;
     }
 
-    function GetAmountOutMin(routeChain memory _routedata, address _tokenOut, uint256 _amountIn) public view returns (uint256 ) {
+    function GetAmountOutMin(routeChain memory _routedata, address _tokenOut, uint256 _amountIn) public returns (uint256 ) {
         address _tokenIn = _routedata.asset;
 		if (_routedata.Itype == DexInterfaceType.IUniswapV4PoolManager) {
 			require(_routedata.Itype != DexInterfaceType.IUniswapV4PoolManager, "not implemented here yet");
@@ -259,7 +259,7 @@ contract Trader {
         }
     }
 
-    function EstimateDualDexTradeGain(routeChain[] calldata _routedata, uint256 _fromAmount) external view returns (int256) {
+    function EstimateDualDexTradeGain(routeChain[] calldata _routedata, uint256 _fromAmount) external returns (int256) {
 		require ( _routedata.length == 2, "Invalid param");
         uint256 amtBack1 = GetAmountOutMin(_routedata[0], _routedata[1].asset, _fromAmount);
         uint256 amtBack2 = GetAmountOutMin(_routedata[1], _routedata[0].asset, amtBack1);
@@ -270,7 +270,7 @@ contract Trader {
     function AmountBack(
         routeChain[] memory _routedata,
         uint256 amountIn
-    ) internal view returns (uint256) {
+    ) internal returns (uint256) {
 		require ( _routedata.length == 4, "Invalid param");
 		_routedata[0].poolFee = getTestV3PoolFee(_routedata[0].router, _routedata[0].asset, _routedata[1].asset);
         uint256 amtBack = GetAmountOutMin(_routedata[0], _routedata[1].asset, amountIn);
@@ -284,7 +284,7 @@ contract Trader {
     }
 
     // Base Asset > Altcoin > Stablecoin > Altcoin > Base Asset
-    function CrossStableSearch(address/*[] calldata _routers*/_router, address _baseAsset, uint256 _amount) external view returns (uint256,address,address,address) {
+    function CrossStableSearch(address/*[] calldata _routers*/_router, address _baseAsset, uint256 _amount) external returns (uint256,address,address,address) {
         uint256 maxAmtBack = 0;
         address token1;
         address token2;

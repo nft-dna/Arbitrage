@@ -161,16 +161,16 @@ describe("Overall Test", function () {
 		await Trader.AddTestV3PoolFee(dex2addr, tokenAaddr, tokenBaddr, poolFee);
 		
 		const route1 = { Itype: IU_V2_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
-		const amtBack1 = await Trader.GetAmountOutMin(route1, tokenBaddr, initialDexReserve);
+		const amtBack1 = BigInt(await Trader.GetAmountOutMin.staticCallResult(route1, tokenBaddr, initialDexReserve));	
 		expect(amtBack1.toString()).to.be.equal(initialDexReserve.toString());
 		const route2 = { Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }		
-        const amtBack2 = await Trader.GetAmountOutMin(route2, tokenAaddr, initialDexReserve);
+        const amtBack2 = BigInt(await Trader.GetAmountOutMin.staticCallResult(route2, tokenAaddr, initialDexReserve));
 		expect(amtBack2.toString()).to.be.equal(initialDexReserve.toString());
 		const routeData1 = [
 			{ Itype: IU_V2_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 },
 			{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0 }
 		]		
-		const estimateDex1 = await Trader.EstimateDualDexTradeGain(routeData1, initialDexReserve);
+		const estimateDex1 = BigInt(await Trader.EstimateDualDexTradeGain.staticCallResult(routeData1, initialDexReserve));
 		expect(estimateDex1.toString()).to.be.equal("0");
 
 		const routeData2 = [
@@ -178,17 +178,17 @@ describe("Overall Test", function () {
 			{ Itype: IU_V3_Q1_POOL, router: dex2addr, asset: tokenCaddr, poolFee: poolFee, tickSpacing: 0 }
 		]	
 		await expect(
-		  Trader.EstimateDualDexTradeGain(routeData2, initialDexReserve)
+		  Trader.EstimateDualDexTradeGain.staticCallResult(routeData2, initialDexReserve)
 		).to.be.revertedWith("Router does not support direct ETH swap");		
 
 		const routeData3 = [
 			{ Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 },
 			{ Itype: IU_V2_POOL, router: dex1addr, asset: tokenCaddr, poolFee: poolFee, tickSpacing: 0 }
 		]	
-		const estimateDex1Native = await Trader.EstimateDualDexTradeGain(routeData3, initialDexReserve);
+		const estimateDex1Native = BigInt(await Trader.EstimateDualDexTradeGain.staticCallResult(routeData3, initialDexReserve));
 		expect(estimateDex1Native.toString()).to.be.equal("0");	
 	
-		const searchDex1 = await Trader.CrossStableSearch(dex1addr, tokenAaddr, ethers.parseEther("0.05"));
+		const searchDex1 = await Trader.CrossStableSearch.staticCallResult(dex1addr, tokenAaddr, ethers.parseEther("0.05"));
 		expect(searchDex1[0].toString()).to.be.equal("0");
 		expect(searchDex1[1].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
 		expect(searchDex1[2].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
@@ -199,17 +199,17 @@ describe("Overall Test", function () {
 			{ Itype: IU_V2_POOL, router: dex1addr, asset: tokenCaddr, poolFee: poolFee, tickSpacing: 0 }
 		]			
 		await expect(
-		  Trader.EstimateDualDexTradeGain(routeData4, initialDexReserve)
+		  Trader.EstimateDualDexTradeGain.staticCallResult(routeData4, initialDexReserve)
 		).to.be.revertedWith("Router does not support direct ETH swap");		
 				
 		const routeData5 = [
 			{ Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 },
 			{ Itype: IU_V2_POOL, router: dex1addr, asset: tokenCaddr, poolFee: poolFee, tickSpacing: 0 }
 		]							
-		const estimateDex2Native = await Trader.EstimateDualDexTradeGain(routeData5, initialDexReserve);
+		const estimateDex2Native = BigInt(await Trader.EstimateDualDexTradeGain.staticCallResult(routeData5, initialDexReserve));
 		expect(estimateDex2Native.toString()).to.be.equal("0");			
 
-		const searchDex2 = await Trader.CrossStableSearch(dex2addr, tokenAaddr, ethers.parseEther("0.05"));
+		const searchDex2 = await Trader.CrossStableSearch.staticCallResult(dex2addr, tokenAaddr, ethers.parseEther("0.05"));
 		expect(searchDex2[0].toString()).to.be.equal("0");
 		expect(searchDex2[1].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
 		expect(searchDex2[2].toString()).to.be.equal("0x0000000000000000000000000000000000000000");
@@ -438,17 +438,16 @@ describe("Overall Test", function () {
 			const initialBalance = await Trade.connect(addr1).getEtherBalance();
 			const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
 			expect(initialTotalBalance).to.be.equal(initialEthBalance);
-			
 			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
-			
+
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, 2*initialPrice, poolFee);
 			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
 			const shouldGainAmount = initialEthBalance;
 			const route1 = { Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 }
 			const route2 = { Itype: IU_V2_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
-			const amtBack = await Trader.GetAmountOutMin(route1, route2.asset, initialEthBalance);
-			const finalEthBalance = await Trader.GetAmountOutMin(route2, route1.asset, amtBack);
+			const amtBack = BigInt(await Trader.GetAmountOutMin.staticCallResult(route1, route2.asset, initialEthBalance));
+			const finalEthBalance = BigInt(await Trader.GetAmountOutMin.staticCallResult(route2, route1.asset, amtBack));
 			expect(finalEthBalance).to.be.equal(initialEthBalance + shouldGainAmount);
 			await tokenA.transfer(dex1addr, amtBack);	
 			await owner.sendTransaction({
@@ -492,8 +491,8 @@ describe("Overall Test", function () {
 					
 			const route1 = { Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 }
 			const route2 = { Itype: IU_V2_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }					
-			const amtBack = await Trader.GetAmountOutMin(route1, route2.asset, initialEthBalance);
-			const finalEthBalance = await Trader.GetAmountOutMin(route2, route1.asset, amtBack);
+			const amtBack = BigInt(await Trader.GetAmountOutMin.staticCallResult(route1, route2.asset, initialEthBalance));
+			const finalEthBalance = BigInt(await Trader.GetAmountOutMin.staticCallResult(route2, route1.asset, amtBack));
 			expect(finalEthBalance).to.be.equal(initialEthBalance + shouldGainAmount);
 			
 			await tokenA.transfer(dex1addr, amtBack);	
@@ -529,11 +528,11 @@ describe("Overall Test", function () {
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice/2, poolFee);
 			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);			
 			/*
-			const amtBack1 = await Trader.GetAmountOutMin(dex1addr, 0, ZERO_ADDRESS, tokenAaddr, initialDexReserve);
+			const amtBack1 = await Trader.GetAmountOutMin.staticCallResult(dex1addr, 0, ZERO_ADDRESS, tokenAaddr, initialDexReserve);
 			console.log(amtBack1);
 			const balance1 = await ethers.provider.getBalance(dex1addr);
 			console.log(balance1);			
-			const amtBack2 = await Trader.GetAmountOutMin(dex2addr, 0, tokenAaddr, ZERO_ADDRESS, amtBack1);
+			const amtBack2 = await Trader.GetAmountOutMin.staticCallResult(dex2addr, 0, tokenAaddr, ZERO_ADDRESS, amtBack1);
 			console.log(amtBack2);
 			const balance2 = await tokenA.balanceOf(dex2addr);
 			console.log(balance2);
@@ -1126,8 +1125,8 @@ describe("Overall Test", function () {
 					
 			const route1 = { Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 }
 			const route2 = { Itype: IU_V2_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }						
-			const amtBack = await Trader.GetAmountOutMin(route1, route2.asset, initialEthBalance);
-			const finalEthBalance = await Trader.GetAmountOutMin(route2, route1.asset, amtBack);
+			const amtBack = BigInt(await Trader.GetAmountOutMin.staticCallResult(route1, route2.asset, initialEthBalance));
+			const finalEthBalance = BigInt(await Trader.GetAmountOutMin.staticCallResult(route2, route1.asset, amtBack));
 			expect(finalEthBalance).to.be.equal(initialEthBalance + shouldGainAmount);
 			
 			await tokenA.transfer(dex1addr, amtBack);	
@@ -1174,8 +1173,8 @@ describe("Overall Test", function () {
 					
 			const route1 = { Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 }
 			const route2 = { Itype: IU_V2_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }							
-			const amtBack = await Trader.GetAmountOutMin(route1, route2.asset, initialEthBalance);
-			const finalEthBalance = await Trader.GetAmountOutMin(route2, route1.asset, amtBack);
+			const amtBack = BigInt(await Trader.GetAmountOutMin.staticCallResult(route1, route2.asset, initialEthBalance));
+			const finalEthBalance = BigInt(await Trader.GetAmountOutMin.staticCallResult(route2, route1.asset, amtBack));
 			expect(finalEthBalance).to.be.equal(initialEthBalance + shouldGainAmount);
 			
 			await tokenA.transfer(dex1addr, amtBack);	
