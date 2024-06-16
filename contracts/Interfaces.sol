@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
+interface INativeToken {
+  receive() external payable;
+  function deposit() external payable;
+  function withdraw(uint256 wad) external;
+}
 
 interface IERC20 {
     function totalSupply() external view returns (uint256);
@@ -33,11 +38,12 @@ struct routeChain {
 
 interface IUniswapV2Router0102 {
 	function WETH() external pure returns (address);
-    function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts);
-    function swapExactTokensForETH(uint amountIn,uint amountOutMin,address[] calldata path,address to,uint deadline) external returns (uint[] memory amounts);
-    function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts);
-    function swapExactETHForTokens(uint amountOutMin,address[] calldata path,address to,uint deadline) external payable returns (uint[] memory amounts);
-    //function swapETHForExactTokens(uint amountOut,address[] calldata path,address to,uint deadline) external payable returns (uint[] memory amounts);	
+	
+	function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts);
+	
+	function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts);
+    function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline) external payable returns (uint[] memory amounts);
+	function swapExactTokensForTokens( uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline ) external  returns (uint[] memory amounts);
 }
 
 interface IUniswapV2Pair {
@@ -52,8 +58,7 @@ interface IUniswapV3Factory {
     function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool);
 }
 
-
-interface IUniswapV3Router {
+interface ISwapRouter {
     struct ExactInputSingleParams {
         address tokenIn;
         address tokenOut;
@@ -65,22 +70,62 @@ interface IUniswapV3Router {
         uint160 sqrtPriceLimitX96;
     }
 	function WETH9() external pure returns (address);	
-	function exactInputSingle(IUniswapV3Router.ExactInputSingleParams calldata params) external returns (uint256 amountOut);
+    /// @notice Swaps `amountIn` of one token for as much as possible of another token
+    /// @param params The parameters necessary for the swap, encoded as `ExactInputSingleParams` in calldata
+    /// @return amountOut The amount of the received token
+    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
 }
+interface IUniswapV3Router01 is ISwapRouter {}
+
+interface V3SwapRouter {
+    struct ExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
+        address recipient;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+        uint160 sqrtPriceLimitX96;
+    }
+	function WETH9() external pure returns (address);	
+    /// @notice Swaps `amountIn` of one token for as much as possible of another token
+    /// @param params The parameters necessary for the swap, encoded as `ExactInputSingleParams` in calldata
+    /// @return amountOut The amount of the received token
+    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
+}
+interface IUniswapV3Router02 is V3SwapRouter {}
 
 interface IUniswapV3Quoter01 {
-    function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external returns (uint256 amountOut);
+    /// @notice Returns the amount out received for a given exact input but for a swap of a single pool
+    /// @param tokenIn The token being swapped in
+    /// @param tokenOut The token being swapped out
+    /// @param fee The fee of the token pool to consider for the pair
+    /// @param amountIn The desired input amount
+    /// @param sqrtPriceLimitX96 The price limit of the pool that cannot be exceeded by the swap
+    /// @return amountOut The amount of `tokenOut` that would be received
+    function quoteExactInputSingle( address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external returns (uint256 amountOut);
 }
 
 interface IUniswapV3Quoter02 {
-	struct QuoteExactInputSingleParams {
-		address tokenIn;
-		address tokenOut;
-		uint24 fee;
-		uint256 amountIn;
-		uint160 sqrtPriceLimitX96;
-	}	
-	function quoteExactInputSingle(IUniswapV3Quoter02.QuoteExactInputSingleParams calldata params) external returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate);
+    struct QuoteExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        uint256 amountIn;
+        uint24 fee;
+        uint160 sqrtPriceLimitX96;
+    }
+    /// @notice Returns the amount out received for a given exact input but for a swap of a single pool
+    /// @param params The params for the quote, encoded as `QuoteExactInputSingleParams`
+    /// tokenIn The token being swapped in
+    /// tokenOut The token being swapped out
+    /// fee The fee of the token pool to consider for the pair
+    /// amountIn The desired input amount
+    /// sqrtPriceLimitX96 The price limit of the pool that cannot be exceeded by the swap
+    /// @return amountOut The amount of `tokenOut` that would be received
+    /// @return sqrtPriceX96After The sqrt price of the pool after the swap
+    /// @return initializedTicksCrossed The number of initialized ticks that the swap crossed
+    /// @return gasEstimate The estimate of the gas that the swap consumes
+    function quoteExactInputSingle(QuoteExactInputSingleParams memory params) external returns ( uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate);
 }
 
 // UniswapV4
@@ -111,12 +156,20 @@ interface IUniswapV4PoolManager {
 		/*IHooks*/address hooks;
 	}
 
-	struct SwapParams {
-		bool zeroForOne;
-		int256 amountSpecified;
-		uint160 sqrtPriceLimitX96;
-	}
+    struct SwapParams {
+        bool zeroForOne;
+        int256 amountSpecified;
+        uint160 sqrtPriceLimitX96;
+    }
 
+    /// @notice Swap against the given pool
+    /// @param key The pool to swap in
+    /// @param params The parameters for swapping
+    /// @param hookData Any data to pass to the callback, via `IUnlockCallback(msg.sender).unlockCallback(data)`
+    /// @return swapDelta The balance delta of the address swapping
+    /// @dev Swapping on low liquidity pools may cause unexpected swap amounts when liquidity available is less than amountSpecified.
+    /// Additionally note that if interacting with hooks that have the BEFORE_SWAP_RETURNS_DELTA_FLAG or AFTER_SWAP_RETURNS_DELTA_FLAG
+    /// the hook may alter the swap input/output. Integrators should perform checks on the returned swapDelta.
     function swap(PoolKey memory key, SwapParams memory params, bytes calldata hookData) external returns (/*BalanceDelta*/int256);
 }
 
@@ -129,5 +182,16 @@ interface IUniswapV4QuoterV4 {
 		uint160 sqrtPriceLimitX96;
 		bytes hookData;
 	}		
-	function quoteExactInputSingle(QuoteExactSingleParams calldata params) external returns (int128[] memory deltaAmounts, uint160 sqrtPriceX96After, uint32 initializedTicksLoaded);	
+    /// @notice Returns the delta amounts for a given exact input swap of a single pool
+    /// @param params The params for the quote, encoded as `QuoteExactInputSingleParams`
+    /// poolKey The key for identifying a V4 pool
+    /// zeroForOne If the swap is from currency0 to currency1
+    /// recipient The intended recipient of the output tokens
+    /// exactAmount The desired input amount
+    /// sqrtPriceLimitX96 The price limit of the pool that cannot be exceeded by the swap
+    /// hookData arbitrary hookData to pass into the associated hooks
+    /// @return deltaAmounts Delta amounts resulted from the swap
+    /// @return sqrtPriceX96After The sqrt price of the pool after the swap
+    /// @return initializedTicksLoaded The number of initialized ticks that the swap loaded
+    function quoteExactInputSingle(QuoteExactSingleParams calldata params) external returns (int128[] memory deltaAmounts, uint160 sqrtPriceX96After, uint32 initializedTicksLoaded);
 }

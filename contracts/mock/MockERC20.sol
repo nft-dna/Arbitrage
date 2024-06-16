@@ -20,7 +20,18 @@ contract MockERC20 {
         totalSupply = _initialSupply;
         _balances[msg.sender] = _initialSupply;
     }
-
+	
+    function deposit() external payable {
+        require(msg.value > 0, "No funds deposited");
+        _balances[msg.sender] = _balances[msg.sender] + msg.value;
+    }
+	
+	function withdraw(uint256 wad) external {
+		require(wad >= _balances[msg.sender], "No funds deposited");
+		_balances[msg.sender] = _balances[msg.sender] - wad;
+		payable(msg.sender).transfer(wad);
+	}
+	
     function balanceOf(address account) public view returns (uint256) {
         return _balances[account];
     }

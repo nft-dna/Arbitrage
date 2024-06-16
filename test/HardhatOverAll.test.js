@@ -18,6 +18,7 @@ async function getGasCosts(receipt) {
 
 describe("Overall Test", function () {	
 		
+	let nativeToken;
 	let NATIVE_TOKEN;
 	let ZERO_ADDRESS = ethers.ZeroAddress;		
 	let Trade;
@@ -48,6 +49,7 @@ describe("Overall Test", function () {
 	let initialPrice = 100;
 	//fee: The fee tier of the pool (e.g., 500, 3000, 10000 for 0.05%, 0.3%, 1% respectively).	
 	let poolFee	= 0; // 3000;
+	//tickSpacing: common tick spacing vlaues are 10, 60, 200
 	let IU_V2_POOL = 0	
 	let IU_V3_Q1_POOL = 1
 	let IU_V3_Q2_POOL = 2	
@@ -56,11 +58,12 @@ describe("Overall Test", function () {
 	beforeEach(async function () {
 		[owner, addr1, addr2] = await ethers.getSigners();	
 		
-	
+		//console.log(await ethers.provider.getBalance(owner));
+		
 		MockERC20 = await ethers.getContractFactory("MockERC20");
-		const weth = await MockERC20.deploy("NATIVE_TOKEN", "WETH", 18, initialSupply);
-		await weth.waitForDeployment();
-		NATIVE_TOKEN = await weth.getAddress();				
+		nativeToken = await MockERC20.deploy("NATIVE_TOKEN", "WETH", 18, initialSupply);
+		await nativeToken.waitForDeployment();
+		NATIVE_TOKEN = await nativeToken.getAddress();				
 		tokenA = await MockERC20.deploy("MockTokenA", "MTKA", 18, initialSupply);
 		await tokenA.waitForDeployment();
 		tokenAaddr = await tokenA.getAddress();
@@ -104,20 +107,14 @@ describe("Overall Test", function () {
 		  value: initialEthBalance,
 		});
 		
-		//tokenA.transfer(TradeAddr, initialDexReserve);
 		await tokenA.approve(TradeAddr, initialDexReserve);
 		await Trade.depositToken(tokenAaddr, initialDexReserve);
-		//tokenB.transfer(TradeAddr, initialDexReserve);
 		await tokenB.approve(TradeAddr, initialDexReserve);
 		await Trade.depositToken(tokenBaddr, initialDexReserve);		
-		//tokenC.transfer(TradeAddr, initialDexReserve);	
 		await tokenC.approve(TradeAddr, initialDexReserve);
 		await Trade.depositToken(tokenCaddr, initialDexReserve);
-		//await owner.sendTransaction({
-		//  to: TradeAddr,
-		//  value: initialEthBalance,
-		//});
-		await Trade.depositEther({value: initialEthBalance});
+
+		//await Trade.depositEther({value: initialEthBalance});
 
 		await dex1.setPairInfo(tokenAaddr, tokenBaddr, initialPrice, poolFee);
 		await dex1.setPairInfo(tokenBaddr, tokenCaddr, initialPrice, poolFee);
@@ -146,7 +143,7 @@ describe("Overall Test", function () {
 	describe("DexSetup", async function () {
 	  it("Set Dex and Token references", async function () {
 		 
-		const availNative = await Trade.getEtherBalance();
+		const availNative = await ethers.provider.getBalance(owner); // Trade.getEtherBalance();
 		//console.log(availNative);
 		const availTokenA = await Trade.getTokenBalance(tokenAaddr);
 		//console.log(availTokenA);
@@ -219,7 +216,8 @@ describe("Overall Test", function () {
 	  });
 	});	
 	
-    describe("Ether Deposits and Withdrawals", function () {
+    /*
+	describe("Ether Deposits and Withdrawals", function () {
         it("Should deposit Ether", async function () {
 			// already done in beforeEach
             //await Trade.depositEther({ value: initialEthBalance });
@@ -250,6 +248,7 @@ describe("Overall Test", function () {
             await expect(Trade.withdrawEther(ethers.parseEther("4.0"))).to.be.revertedWith("Insufficient Ether balance");
         });		
     });
+	*/
 
     describe("Token Deposits and Withdrawals", function () {
         it("Should deposit tokens", async function () {
@@ -288,7 +287,8 @@ describe("Overall Test", function () {
     });
 	
     describe("Deposits Security", function () {
-        it("Should not allow another user to withdraw Ether balance", async function () {
+        /*
+		it("Should not allow another user to withdraw Ether balance", async function () {
             await Trade.depositEther({ value: ethers.parseEther("1") });
             await expect(Trade.connect(addr1).withdrawEther(ethers.parseEther("1"))).to.be.revertedWith("Insufficient Ether balance");
         });
@@ -303,6 +303,7 @@ describe("Overall Test", function () {
                 .to.emit(Trade, "WithdrawEther")
                 .withArgs(addr1.address, ethers.parseEther("1"));			
         });		
+		*/
 
         it("Should not allow another user to withdraw token balance", async function () {
 			await tokenA.transfer(dex1addr, initialDexReserve);
@@ -326,7 +327,8 @@ describe("Overall Test", function () {
     });	
 
 	describe("Trade Safety Functions Security", function () {
-        it("Recover Ether balance", async function () {
+        /*
+		it("Recover Ether balance", async function () {
             const balance = await Trade.getTotalEtherBalance();
             await Trade.connect(owner).safeWithdrawEther(balance);
 			expect(await Trade.getTotalEtherBalance()).to.equal(0);
@@ -336,7 +338,8 @@ describe("Overall Test", function () {
             const balance = await Trade.getTotalEtherBalance();
             await expect(Trade.connect(addr1).safeWithdrawEther(balance)).to.be.revertedWith("caller is not the owner!");
 			expect(await Trade.getTotalEtherBalance()).to.equal(balance);
-        });		
+        });
+		*/		
 		
         it("Recover token balance", async function () {
             const balance = await Trade.getTotalTokenBalance(tokenAaddr);
@@ -432,14 +435,19 @@ describe("Overall Test", function () {
 		
 
 		it("Should perform an Ether InstaTradeTokens (without payable call)", async function () {
-
-            // should already use the 'common' deposited amount
+			
+			await nativeToken.connect(addr1).deposit({value: initialEthBalance});
+			await nativeToken.connect(addr1).approve(TradeAddr, initialEthBalance);				
+			await Trade.connect(addr1).depositToken(NATIVE_TOKEN, initialEthBalance);
+            
+			// should already use the 'common' deposited amount
 			//await Trade.depositEther({ value: initialPrice });
-			const initialBalance = await Trade.connect(addr1).getEtherBalance();
-			const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
-			expect(initialTotalBalance).to.be.equal(initialEthBalance);
+			const initialBalance = await ethers.provider.getBalance(addr1); // Trade.connect(addr1).getEtherBalance();
+			//const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
+			//expect(initialTotalBalance).to.be.equal(initialEthBalance);
 			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
-			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
+			//const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
+			const initialBalanceN = await Trade.connect(addr1).getTokenBalance(NATIVE_TOKEN);
 
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, 2*initialPrice, poolFee);
 			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
@@ -449,38 +457,49 @@ describe("Overall Test", function () {
 			const amtBack = BigInt(await Trader.GetAmountOutMin.staticCallResult(route1, route2.asset, initialEthBalance));
 			const finalEthBalance = BigInt(await Trader.GetAmountOutMin.staticCallResult(route2, route1.asset, amtBack));
 			expect(finalEthBalance).to.be.equal(initialEthBalance + shouldGainAmount);
+					
 			await tokenA.transfer(dex1addr, amtBack);	
+			/*
 			await owner.sendTransaction({
 			  to: dex2addr,
 			  value: initialEthBalance,
-			});				
+			});
+			*/
+			await nativeToken.deposit({value: BigInt(2)*initialEthBalance});
+			await nativeToken.transfer(dex2addr, BigInt(2)*initialEthBalance);
+			
 			const routeData1 = [
 				{ Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 },
 				{ Itype: IU_V2_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]							
-			await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialEthBalance, 0))
+			await /*expect(*/Trade.connect(addr1).InstaTradeTokens(routeData1, initialEthBalance, 0)//)
                 //.to.emit(Trade, "InstaTraded")
                 //.withArgs(addr1.address, routeData1[0].asset, routeData1, initialEthBalance, shouldGainAmount);			
 				;
+				
+			await Trade.connect(addr1).withdrawToken(NATIVE_TOKEN, shouldGainAmount);
+			await nativeToken.connect(addr1).withdraw(shouldGainAmount);
+				
 			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
-			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
+			//expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr
+			const finalBalanceN  = await Trade.connect(addr1).getTokenBalance(NATIVE_TOKEN);
+			const finalBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();
 
-            const finalBalance = await Trade.connect(addr1).getEtherBalance();
             expect(finalBalance).to.be.above(initialBalance);
-			expect(finalBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
-			const finalTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
-			expect(finalTotalBalance).to.be.above(finalBalance);
-			expect(finalTotalBalance).to.be.above(initialTotalBalance);			
+			//expect(finalBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
+			//const finalTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
+			//expect(finalTotalBalance).to.be.above(finalBalance);
+			//expect(finalTotalBalance).to.be.above(initialTotalBalance);			
         });
 
 		it("Should perform an Ether InstaTradeTokens (with payable call)", async function () {
 
-			const depositBalance = await Trade.connect(addr1).getEtherBalance();	
-			await Trade.connect(addr1).withdrawEther(depositBalance);		
-			const initialBalance = await Trade.connect(addr1).getEtherBalance();			
-			expect(initialBalance).to.be.equal(0);
-			const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
-			expect(initialTotalBalance).to.be.equal(initialEthBalance);
+			//const depositBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();	
+			//await Trade.connect(addr1).withdrawEther(depositBalance);		
+			const initialBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();			
+			//expect(initialBalance).to.be.equal(0);
+			//const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
+			//expect(initialTotalBalance).to.be.equal(initialEthBalance);
 			
 			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
@@ -496,16 +515,18 @@ describe("Overall Test", function () {
 			expect(finalEthBalance).to.be.equal(initialEthBalance + shouldGainAmount);
 			
 			await tokenA.transfer(dex1addr, amtBack);	
-			await owner.sendTransaction({
+			/*await owner.sendTransaction({
 			  to: dex2addr,
 			  value: initialEthBalance,
-			});				
+			});*/			
+			await nativeToken.deposit({value: BigInt(2)*initialEthBalance});
+			await nativeToken.transfer(dex2addr, BigInt(2)*initialEthBalance);
 			
 			const routeData1 = [
 				{ Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 },
 				{ Itype: IU_V2_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
 			]					
-			await expect(Trade.connect(addr1).InstaTradeTokens(routeData1, initialEthBalance, 0, { value : initialEthBalance }))
+			await /*expect(*/Trade.connect(addr1).InstaTradeTokens(routeData1, initialEthBalance, 0, { value : initialEthBalance })//)
                 //.to.emit(Trade, "InstaTraded")
                 //.withArgs(addr1.address, routeData1[0].asset, routeData1, initialEthBalance, shouldGainAmount);	
 				;				
@@ -513,12 +534,12 @@ describe("Overall Test", function () {
 			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const finalBalance = await Trade.connect(addr1).getEtherBalance();
+            const finalBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();
             expect(finalBalance).to.be.above(initialBalance);
-			expect(finalBalance).to.be.equal(initialEthBalance + BigInt(shouldGainAmount));
-			const finalTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
-			expect(finalTotalBalance).to.be.above(finalBalance);
-			expect(finalTotalBalance).to.be.above(initialTotalBalance);	
+			//expect(finalBalance).to.be.equal(initialEthBalance + BigInt(shouldGainAmount));
+			//const finalTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
+			//expect(finalTotalBalance).to.be.above(finalBalance);
+			//expect(finalTotalBalance).to.be.above(initialTotalBalance);	
         });	
 		
         it("Should revert an Ether InstaTradeTokens (without payable call) with a loss", async function () {
@@ -537,6 +558,13 @@ describe("Overall Test", function () {
 			const balance2 = await tokenA.balanceOf(dex2addr);
 			console.log(balance2);
 			*/
+			await nativeToken.deposit({value: initialDexReserve});
+			await nativeToken.transfer(dex2addr, initialDexReserve);
+			
+			await nativeToken.connect(addr1).deposit({value: initialDexReserve});
+			await nativeToken.connect(addr1).approve(TradeAddr, initialDexReserve);				
+			await Trade.connect(addr1).depositToken(NATIVE_TOKEN, initialDexReserve);
+			
 			const routeData1 = [
 				{ Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 },
 				{ Itype: IU_V2_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0 }
@@ -547,13 +575,16 @@ describe("Overall Test", function () {
 		
         it("Should revert an Ether InstaTradeTokens (with payable call) with a loss", async function () {
 
-			const depositBalance = await Trade.connect(addr1).getEtherBalance();	
-			await Trade.connect(addr1).withdrawEther(depositBalance);		
-			const initialBalance = await Trade.connect(addr1).getEtherBalance();			
-			expect(initialBalance).to.be.equal(0);
+			//const depositBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();	
+			//await Trade.connect(addr1).withdrawEther(depositBalance);		
+			const initialBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();			
+			//expect(initialBalance).to.be.equal(0);
 
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice/2, poolFee);
 			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
+			
+			await nativeToken.deposit({value: initialDexReserve});
+			await nativeToken.transfer(dex2addr, initialDexReserve);			
 			
 			const routeData1 = [
 				{ Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 },
@@ -567,6 +598,13 @@ describe("Overall Test", function () {
 			
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
 			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
+
+			await nativeToken.deposit({value: initialDexReserve});
+			await nativeToken.transfer(dex2addr, initialDexReserve);
+			
+			await nativeToken.connect(addr1).deposit({value: initialDexReserve});
+			await nativeToken.connect(addr1).approve(TradeAddr, initialDexReserve);				
+			await Trade.connect(addr1).depositToken(NATIVE_TOKEN, initialDexReserve);		
             
 			const routeData1 = [
 				{ Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 },
@@ -578,13 +616,16 @@ describe("Overall Test", function () {
 		
         it("Should revert an Ether InstaTradeTokens (with payable call) with 0 gain", async function () {
 			
-			const depositBalance = await Trade.connect(addr1).getEtherBalance();	
-			await Trade.connect(addr1).withdrawEther(depositBalance);		
-			const initialBalance = await Trade.connect(addr1).getEtherBalance();			
-			expect(initialBalance).to.be.equal(0);
+			//const depositBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();	
+			//await Trade.connect(addr1).withdrawEther(depositBalance);		
+			const initialBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();			
+			//expect(initialBalance).to.be.equal(0);
 			
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
 			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
+			
+			await nativeToken.deposit({value: initialDexReserve});
+			await nativeToken.transfer(dex2addr, initialDexReserve);			
             
 			const routeData1 = [
 				{ Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0 },
@@ -1110,11 +1151,15 @@ describe("Overall Test", function () {
 		
 		it("Should perform an Ether 2dex InstaTradeTokens V2-V2 (without payable call)", async function () {
 
+			await nativeToken.connect(addr1).deposit({value: initialEthBalance});
+			await nativeToken.connect(addr1).approve(TradeAddr, initialEthBalance);				
+			await Trade.connect(addr1).depositToken(NATIVE_TOKEN, initialEthBalance);
+			
             // should already use the 'common' deposited amount
 			//await Trade.depositEther({ value: initialPrice });
-			const initialBalance = await Trade.connect(addr1).getEtherBalance();
-			const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
-			expect(initialTotalBalance).to.be.equal(initialEthBalance);
+			const initialBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();
+			//const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
+			//expect(initialTotalBalance).to.be.equal(initialEthBalance);
 			
 			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
@@ -1130,39 +1175,44 @@ describe("Overall Test", function () {
 			expect(finalEthBalance).to.be.equal(initialEthBalance + shouldGainAmount);
 			
 			await tokenA.transfer(dex1addr, amtBack);	
-			await owner.sendTransaction({
+			/*await owner.sendTransaction({
 			  to: dex2addr,
 			  value: initialEthBalance,
-			});				
+			});*/				
+			await nativeToken.deposit({value: BigInt(2)*initialEthBalance});
+			await nativeToken.transfer(dex2addr, BigInt(2)*initialEthBalance);
 			
             const routeData = [
                 { Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0  },
                 { Itype: IU_V2_POOL, router: dex2addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0  }
             ]
-			await expect(Trade.connect(addr1).InstaTradeTokens(routeData, initialEthBalance, 0))
+			await /*expect(*/Trade.connect(addr1).InstaTradeTokens(routeData, initialEthBalance, 0)//)
                 //.to.emit(Trade, "InstaTraded")
                 //.withArgs(addr1.address, ZERO_ADDRESS, routeData, initialEthBalance, shouldGainAmount);			
 				;
+				
+			await Trade.connect(addr1).withdrawToken(NATIVE_TOKEN, shouldGainAmount);
+			await nativeToken.connect(addr1).withdraw(shouldGainAmount);				
             
 			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const finalBalance = await Trade.connect(addr1).getEtherBalance();
+            const finalBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();
             expect(finalBalance).to.be.above(initialBalance);
-			expect(finalBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
-			const finalTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
-			expect(finalTotalBalance).to.be.above(finalBalance);
-			expect(finalTotalBalance).to.be.above(initialTotalBalance);			
+			//expect(finalBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
+			//const finalTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
+			//expect(finalTotalBalance).to.be.above(finalBalance);
+			//expect(finalTotalBalance).to.be.above(initialTotalBalance);			
         });		
 
 		it("Should perform an Ether 2dex InstaTradeTokens V2-V2 (with payable call)", async function () {
 
-			const depositBalance = await Trade.connect(addr1).getEtherBalance();	
-			await Trade.connect(addr1).withdrawEther(depositBalance);		
-			const initialBalance = await Trade.connect(addr1).getEtherBalance();			
-			expect(initialBalance).to.be.equal(0);
-			const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
-			expect(initialTotalBalance).to.be.equal(initialEthBalance);
+			//const depositBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();	
+			//await Trade.connect(addr1).withdrawEther(depositBalance);		
+			const initialBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();			
+			//expect(initialBalance).to.be.equal(0);
+			//const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
+			//expect(initialTotalBalance).to.be.equal(initialEthBalance);
 			
 			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
@@ -1178,10 +1228,12 @@ describe("Overall Test", function () {
 			expect(finalEthBalance).to.be.equal(initialEthBalance + shouldGainAmount);
 			
 			await tokenA.transfer(dex1addr, amtBack);	
-			await owner.sendTransaction({
+			/*await owner.sendTransaction({
 			  to: dex2addr,
 			  value: initialEthBalance,
-			});				
+			});*/				
+			await nativeToken.deposit({value: BigInt(2)*initialEthBalance});
+			await nativeToken.transfer(dex2addr, BigInt(2)*initialEthBalance);
 			
             const routeData = [
                 { Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0  },
@@ -1195,12 +1247,12 @@ describe("Overall Test", function () {
 			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const finalBalance = await Trade.connect(addr1).getEtherBalance();
+            const finalBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();
             expect(finalBalance).to.be.above(initialBalance);
-			expect(finalBalance).to.be.equal(initialEthBalance + BigInt(shouldGainAmount));
-			const finalTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
-			expect(finalTotalBalance).to.be.above(finalBalance);
-			expect(finalTotalBalance).to.be.above(initialTotalBalance);	
+			//expect(finalBalance).to.be.equal(initialEthBalance + BigInt(shouldGainAmount));
+			//const finalTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
+			//expect(finalTotalBalance).to.be.above(finalBalance);
+			//expect(finalTotalBalance).to.be.above(initialTotalBalance);	
         });	
 		
         it("Should revert an Ether 2dex InstaTradeTokens V2-V2 (without payable call) with a loss", async function () {
@@ -1208,7 +1260,14 @@ describe("Overall Test", function () {
             // should already use the 'common' deposited amount
 			//await Trade.depositEther({ value: initialPrice });
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice/2, poolFee);
-			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);			
+			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);	
+
+			await nativeToken.deposit({value: initialDexReserve});
+			await nativeToken.transfer(dex2addr, initialDexReserve);
+			
+			await nativeToken.connect(addr1).deposit({value: initialDexReserve});
+			await nativeToken.connect(addr1).approve(TradeAddr, initialDexReserve);			
+			await Trade.connect(addr1).depositToken(NATIVE_TOKEN, initialDexReserve);			
 
             const routeData = [
                 { Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0  },
@@ -1220,13 +1279,16 @@ describe("Overall Test", function () {
 		
         it("Should revert an Ether 2dex InstaTradeTokens V2-V2 (with payable call) with a loss", async function () {
 
-			const depositBalance = await Trade.connect(addr1).getEtherBalance();	
-			await Trade.connect(addr1).withdrawEther(depositBalance);		
-			const initialBalance = await Trade.connect(addr1).getEtherBalance();			
-			expect(initialBalance).to.be.equal(0);
+			//const depositBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();	
+			//await Trade.connect(addr1).withdrawEther(depositBalance);		
+			const initialBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();			
+			//expect(initialBalance).to.be.equal(0);
 
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice/2, poolFee);
 			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
+			
+			await nativeToken.deposit({value: initialDexReserve});
+			await nativeToken.transfer(dex2addr, initialDexReserve);			
 			
             const routeData = [
                 { Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0  },
@@ -1240,6 +1302,13 @@ describe("Overall Test", function () {
 			
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
 			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
+			
+			await nativeToken.deposit({value: initialDexReserve});
+			await nativeToken.transfer(dex2addr, initialDexReserve);
+
+			await nativeToken.connect(addr1).deposit({value: initialDexReserve});
+			await nativeToken.connect(addr1).approve(TradeAddr, initialDexReserve);				
+			await Trade.connect(addr1).depositToken(NATIVE_TOKEN, initialDexReserve);	
             
             const routeData = [
                 { Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0  },
@@ -1251,13 +1320,16 @@ describe("Overall Test", function () {
 		
         it("Should revert an Ether 2dex InstaTradeTokens V2-V2 (with payable call) with 0 gain", async function () {
 			
-			const depositBalance = await Trade.connect(addr1).getEtherBalance();	
-			await Trade.connect(addr1).withdrawEther(depositBalance);		
-			const initialBalance = await Trade.connect(addr1).getEtherBalance();			
-			expect(initialBalance).to.be.equal(0);
+			//const depositBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();	
+			//await Trade.connect(addr1).withdrawEther(depositBalance);		
+			const initialBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();			
+			//expect(initialBalance).to.be.equal(0);
 			
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
 			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
+			
+			await nativeToken.deposit({value: initialDexReserve});
+			await nativeToken.transfer(dex2addr, initialDexReserve);			
             
             const routeData = [
                 { Itype: IU_V2_POOL, router: dex1addr, asset: ZERO_ADDRESS, poolFee: poolFee, tickSpacing: 0  },

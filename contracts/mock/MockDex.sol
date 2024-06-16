@@ -155,7 +155,23 @@ contract MockDEX {
 
 
     // Mock Uniswap V3 swap
-    function exactInputSingle(IUniswapV3Router.ExactInputSingleParams calldata params) external payable returns (uint256 amountOut) {	
+	// IUniswapV3Router02 mock
+    function exactInputSingle(IUniswapV3Router02.ExactInputSingleParams calldata params) external payable returns (uint256 amountOut) {	
+
+		(address token0, address token1) = sortTokens(params.tokenIn, params.tokenOut);
+		PairInfo memory pinfo = pairs[token0][token1];
+		require(pinfo.price > 0, "Price not set");
+
+        amountOut = (((params.amountIn * pinfo.price) / 100) * (100000 - params.fee)) / 100000; // Apply price and fee	
+        require(amountOut >= params.amountOutMinimum, "Insufficient output amount");		
+
+        // Transfer tokens
+        IERC20(params.tokenIn).transferFrom(msg.sender, address(this), params.amountIn);
+        IERC20(params.tokenOut).transfer(params.recipient, amountOut);
+    }
+	
+	// IUniswapV3Router01 mock
+    function exactInputSingle(IUniswapV3Router01.ExactInputSingleParams calldata params) external payable returns (uint256 amountOut) {	
 
 		(address token0, address token1) = sortTokens(params.tokenIn, params.tokenOut);
 		PairInfo memory pinfo = pairs[token0][token1];
@@ -168,7 +184,7 @@ contract MockDEX {
         IERC20(params.tokenIn).transferFrom(msg.sender, address(this), params.amountIn);
         IERC20(params.tokenOut).transfer(params.recipient, amountOut);
 
-    }
+    }	
 	
     // Mock Uniswap V3 quoteExactInputSingle
     function quoteExactInputSingle(
