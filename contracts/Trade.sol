@@ -27,8 +27,11 @@ contract Trade is Deposit {
         _swapToken(routeTo, _tokenOut, amountIn, deadlineDeltaSec);
 		
 		uint256 afterBalance = IERC20(_tokenOut).balanceOf(address(this));
-		if (checkProfit)
+		if (checkProfit) {
 			require(afterBalance > initialBalance, "Trade Reverted, No Profit Made");		
+		} else if (afterBalance < initialBalance) {
+			return 0;
+		}
 		return afterBalance - initialBalance;
     }    
 	
