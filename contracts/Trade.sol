@@ -30,8 +30,9 @@ contract Trade is Deposit {
 		if (checkProfit) {
 			require(afterBalance > initialBalance, "Trade Reverted, No Profit Made");		
 		} else if (afterBalance < initialBalance) {
+			tokenBalances[_tokenOut][msg.sender] = tokenBalances[_tokenOut][msg.sender] - (initialBalance - afterBalance);
 			return 0;
-		}
+		}	
 		return afterBalance - initialBalance;
     }    
 	
@@ -89,7 +90,7 @@ contract Trade is Deposit {
 			params.amountOutMinimum = 0;
 			params.sqrtPriceLimitX96 = 0; //MAX_PRICE_LIMIT;
             ISwapRouter(routeTo.router).exactInputSingle(params);	
-        } else { // DexInterfaceType.IUniswapV2Router
+        } else if (routeTo.Itype == DexInterfaceType.IUniswapV2Router) {
 		// V2 
 			address[] memory path;
 			path = new address[](2);
@@ -104,7 +105,9 @@ contract Trade is Deposit {
 			//} else {
 				IUniswapV2Router0102(routeTo.router).swapExactTokensForTokens(_amountIn, 0, path, address(this), deadline);    
 			//}
-        }
+        } else { //  if (routeTo.Itype == DexInterfaceType.IQuickswapV3RouterQuoter) {
+			IQuickswapV3Router(routeTo.router).exactInputSingle(_tokenIn, _tokenOut, address(this), deadline, _amountIn, 0, 0);
+		}
     }    
 
 	function InstaTradeTokens(routeChain[] calldata _routedata, uint256 _startAmount, uint deadlineDeltaSec) public payable {
@@ -121,7 +124,10 @@ contract Trade is Deposit {
 			}
         }
         uint256 startBalance = IERC20(tokenIn).balanceOf(address(this));
-		require(startBalance >= _startAmount, "Insufficient Token balance");		
+		require(startBalance >= _startAmount, "Insufficient Token balance");
+		if (!checkProfit) {
+			require(_startAmount <= tokenBalances[tokenIn][msg.sender], "Insufficient Token balance");
+		}
 		
 		uint256 gainedAmount = _instaTradeTokens(_routedata, _startAmount, startBalance, deadlineDeltaSec, checkProfit);			
 		depositTokenSucceded(msg.sender, tokenIn, gainedAmount);
@@ -134,6 +140,36 @@ contract Trade is Deposit {
 		} 	
         emit InstaTraded(msg.sender, tokenIn, _routedata, _startAmount, gainedAmount);
     }  
+
+    function InstaSwapTokens(routeChain calldata _routedata, uint256 _startAmount, address _tokenOut, uint deadlineDeltaSec) public payable {
+		require (_tokenOut != _routedata.asset, "Invalid param");
+		address tokenIn = (address(0x0) == _routedata.asset) ? NATIVE_TOKEN : _routedata.asset;
+		address tokenOut = (address(0x0) == _tokenOut) ? NATIVE_TOKEN : _tokenOut;
+		if (NATIVE_TOKEN == tokenIn) {
+			if (msg.value > 0) {
+				INativeToken(NATIVE_TOKEN).deposit{ value: msg.value }();
+				depositTokenSucceded(msg.sender, NATIVE_TOKEN, msg.value);				
+			}
+        }
+        uint256 startAmount = getTokenBalance(tokenIn, msg.sender);
+		require(startAmount >= _startAmount, "Insufficient Token balance");
+
+		uint256 startBalance = IERC20(tokenOut).balanceOf(address(this));	
+		_swapToken( _routedata, tokenOut, _startAmount, deadlineDeltaSec);
+		uint256 endBalance = IERC20(tokenOut).balanceOf(address(this));
+
+		tokenBalances[tokenIn][msg.sender] = tokenBalances[tokenIn][msg.sender] - _startAmount;
+		if (endBalance > startBalance) {
+			uint256 amount = endBalance - startBalance;
+			depositTokenSucceded(msg.sender, tokenOut, amount);
+			if (address(0x0) == _tokenOut) {
+				INativeToken(NATIVE_TOKEN).withdraw(amount);
+				tokenBalances[NATIVE_TOKEN][msg.sender] = tokenBalances[NATIVE_TOKEN][msg.sender] - amount;
+				payable(msg.sender).transfer(amount);
+				emit WithdrawToken(NATIVE_TOKEN, msg.sender, amount);
+			}
+		}
+    } 	
 	
     function _instaTradeTokens(routeChain[] calldata _routedata, uint256 _amount, uint256 _startBalance, uint deadlineDeltaSec, bool checkProfit) internal returns (uint256 gainedAmount) {
 		uint256[] memory balance = new uint256[](_routedata.length);

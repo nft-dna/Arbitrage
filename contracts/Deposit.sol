@@ -48,8 +48,8 @@ contract Deposit {
     //    return etherBalances[msg.sender];
     //}
 
-    function getTokenBalance(address _token) public view returns (uint256) {
-        return tokenBalances[_token][msg.sender];
+    function getTokenBalance(address _token, address user) public view returns (uint256) {
+        return tokenBalances[_token][user];
     }
 
     //function getTotalEtherBalance() public view returns (uint256) {

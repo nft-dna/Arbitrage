@@ -145,11 +145,11 @@ describe("Overall Test", function () {
 		 
 		const availNative = await ethers.provider.getBalance(owner); // Trade.getEtherBalance();
 		//console.log(availNative);
-		const availTokenA = await Trade.getTokenBalance(tokenAaddr);
+		const availTokenA = await Trade.getTokenBalance(tokenAaddr, owner);
 		//console.log(availTokenA);
-		const availTokenB = await Trade.getTokenBalance(tokenBaddr);
+		const availTokenB = await Trade.getTokenBalance(tokenBaddr, owner);
 		//console.log(availTokenB);
-		const availTokenC = await Trade.getTokenBalance(tokenCaddr);
+		const availTokenC = await Trade.getTokenBalance(tokenCaddr, owner);
 		//console.log(availTokenC);
 
 		await Trader.AddDex([dex1addr, dex2addr], [IU_V2_POOL, IU_V3_Q1_POOL],[dex1addr, dex2addr]);
@@ -255,7 +255,7 @@ describe("Overall Test", function () {
 			// already done in beforeEach
             //await tokenA.approve(TradeAddr, initialDexReserve);
             //await Trade.depositToken(tokenAaddr, initialDexReserve);
-            expect(await Trade.getTokenBalance(tokenAaddr)).to.equal(initialDexReserve);
+            expect(await Trade.getTokenBalance(tokenAaddr, owner)).to.equal(initialDexReserve);
         });
 
         it("Should withdraw tokens", async function () {
@@ -263,7 +263,7 @@ describe("Overall Test", function () {
             //await tokenA.approve(TradeAddr, initialDexReserve);
             //await Trade.depositToken(tokenAaddr, initialDexReserve);
             await Trade.withdrawToken(tokenAaddr, initialDexReserve);
-            expect(await Trade.getTokenBalance(tokenAaddr)).to.equal(0);
+            expect(await Trade.getTokenBalance(tokenAaddr, owner)).to.equal(0);
         });
 
         it("Should emit DepositToken event", async function () {
@@ -317,8 +317,8 @@ describe("Overall Test", function () {
 			await tokenA.connect(addr1).approve(TradeAddr, initialDexReserve);
 			await Trade.connect(addr1).depositToken(tokenAaddr, initialDexReserve);
 			expect(await Trade.connect(owner).getTotalTokenBalance(tokenAaddr)).to.equal(initialDexReserve*BigInt(2));
-			expect(await Trade.connect(owner).getTokenBalance(tokenAaddr)).to.equal(initialDexReserve);
-			expect(await Trade.connect(addr1).getTokenBalance(tokenAaddr)).to.equal(initialDexReserve);
+			expect(await Trade.connect(owner).getTokenBalance(tokenAaddr, owner)).to.equal(initialDexReserve);
+			expect(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1)).to.equal(initialDexReserve);
             await expect(Trade.connect(addr1).withdrawToken(tokenAaddr, initialDexReserve*BigInt(2))).to.be.revertedWith("Insufficient token balance");
             await expect(Trade.connect(addr1).withdrawToken(tokenAaddr, initialDexReserve))
                 .to.emit(Trade, "WithdrawToken")
@@ -360,11 +360,11 @@ describe("Overall Test", function () {
 
             // should already use the 'common' deposited amount
 			//await Trade.depositEther({ value: initialPrice });
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			// add tokenB extra reserve for dex2
@@ -382,10 +382,10 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, routeData1[0].asset, routeData1, initialDexReserve, shouldGainAmount);			
 				;
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
             expect(tokenBalance).to.be.above(initialBalance);
 			expect(tokenBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
 			const tokenTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
@@ -398,7 +398,7 @@ describe("Overall Test", function () {
             // should already use the 'common' deposited amount
 			//await Trade.depositEther({ value: initialPrice });
 								
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			//console.log(initialBalance);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			//console.log(initialTotalBalance);
@@ -418,7 +418,7 @@ describe("Overall Test", function () {
 				).to.be.revertedWith("Trade Reverted, No Profit Made");
 			//await Trade.connect(addr1).InstaTradeTokens(tokenAaddr, tokenBaddr, dex1addr, V2_NO_POOL_FEE, dex2addr, V2_NO_POOL_FEE, initialDexReserve, 0);
 			
-			//const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			//const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			//console.log(tokenBalance);
 			//const tokenTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			//console.log(tokenTotalBalance);
@@ -445,9 +445,9 @@ describe("Overall Test", function () {
 			const initialBalance = await ethers.provider.getBalance(addr1); // Trade.connect(addr1).getEtherBalance();
 			//const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
 			//expect(initialTotalBalance).to.be.equal(initialEthBalance);
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			//const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
-			const initialBalanceN = await Trade.connect(addr1).getTokenBalance(NATIVE_TOKEN);
+			const initialBalanceN = await Trade.connect(addr1).getTokenBalance(NATIVE_TOKEN, addr1);
 
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, 2*initialPrice, poolFee);
 			await dex2.setPairInfo(tokenAaddr, NATIVE_TOKEN, initialPrice, poolFee);
@@ -480,9 +480,9 @@ describe("Overall Test", function () {
 			await Trade.connect(addr1).withdrawToken(NATIVE_TOKEN, shouldGainAmount);
 			await nativeToken.connect(addr1).withdraw(shouldGainAmount);
 				
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			//expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr
-			const finalBalanceN  = await Trade.connect(addr1).getTokenBalance(NATIVE_TOKEN);
+			const finalBalanceN  = await Trade.connect(addr1).getTokenBalance(NATIVE_TOKEN, addr1);
 			const finalBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();
 
             expect(finalBalance).to.be.above(initialBalance);
@@ -501,7 +501,7 @@ describe("Overall Test", function () {
 			//const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
 			//expect(initialTotalBalance).to.be.equal(initialEthBalance);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, 2*initialPrice, poolFee);
@@ -531,7 +531,7 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, routeData1[0].asset, routeData1, initialEthBalance, shouldGainAmount);	
 				;				
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
             const finalBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();
@@ -640,11 +640,11 @@ describe("Overall Test", function () {
     describe("InstaTradeTokens UniswapV3 Function", function () {
         it("Should perform a V3-V3 token InstaTradeTokens", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			await tokenA.transfer(dex1addr, initialDexReserve);			
@@ -661,10 +661,10 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, routeData1[0].asset, routeData1, initialDexReserve, shouldGainAmount);			
 				;
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
             expect(tokenBalance).to.be.above(initialBalance);
 			expect(tokenBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
 			const tokenTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
@@ -674,7 +674,7 @@ describe("Overall Test", function () {
 		
         it("Should revert a V3-V3 token InstaTradeTokens with a loss", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);			
 
@@ -703,11 +703,11 @@ describe("Overall Test", function () {
 		
         it("Should perform a V3-V2 token InstaTradeTokens", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			await tokenA.transfer(dex1addr, initialDexReserve);			
@@ -724,10 +724,10 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, routeData1[0].asset, routeData1, initialDexReserve, shouldGainAmount);
 				;				
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
             expect(tokenBalance).to.be.above(initialBalance);
 			expect(tokenBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
 			const tokenTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
@@ -737,7 +737,7 @@ describe("Overall Test", function () {
 		
         it("Should revert a V3-V2 token InstaTradeTokens with a loss", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);			
 
@@ -766,11 +766,11 @@ describe("Overall Test", function () {
 			
         it("Should perform a V2-V3 token InstaTradeTokens", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			await tokenA.transfer(dex1addr, initialDexReserve);			
@@ -787,10 +787,10 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, routeData1[0].asset, routeData1, initialDexReserve, shouldGainAmount);			
 				;
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
             expect(tokenBalance).to.be.above(initialBalance);
 			expect(tokenBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
 			const tokenTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
@@ -800,7 +800,7 @@ describe("Overall Test", function () {
 		
         it("Should revert a V2-V3 token InstaTradeTokens with a loss", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);			
 
@@ -832,11 +832,11 @@ describe("Overall Test", function () {
     describe("InstaTradeTokens UniswapV4 Function", function () {
         it("Should perform a V4-V4 token InstaTradeTokens", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			await tokenA.transfer(dex1addr, initialDexReserve);			
@@ -853,10 +853,10 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, routeData1[0].asset, routeData1, initialDexReserve, shouldGainAmount);			
 				;
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
             expect(tokenBalance).to.be.above(initialBalance);
 			expect(tokenBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
 			const tokenTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
@@ -866,7 +866,7 @@ describe("Overall Test", function () {
 		
         it("Should revert a V4-V4 token InstaTradeTokens with a loss", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);			
 
@@ -895,11 +895,11 @@ describe("Overall Test", function () {
 		
         it("Should perform a V4-V3 token InstaTradeTokens", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			await tokenA.transfer(dex1addr, initialDexReserve);			
@@ -916,10 +916,10 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, routeData1[0].asset, routeData1, initialDexReserve, shouldGainAmount);			
 				;
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
             expect(tokenBalance).to.be.above(initialBalance);
 			expect(tokenBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
 			const tokenTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
@@ -929,7 +929,7 @@ describe("Overall Test", function () {
 		
         it("Should revert a V4-V3 token InstaTradeTokens with a loss", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);			
 
@@ -958,11 +958,11 @@ describe("Overall Test", function () {
 		
         it("Should perform a V3-V4 token InstaTradeTokens", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			await tokenA.transfer(dex1addr, initialDexReserve);			
@@ -979,10 +979,10 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, routeData1[0].asset, routeData1, initialDexReserve, shouldGainAmount);			
 				;
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
             expect(tokenBalance).to.be.above(initialBalance);
 			expect(tokenBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
 			const tokenTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
@@ -992,7 +992,7 @@ describe("Overall Test", function () {
 		
         it("Should revert a V3-V4 token InstaTradeTokens with a loss", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);			
 
@@ -1021,11 +1021,11 @@ describe("Overall Test", function () {
 		
         it("Should perform a V4-V2 token InstaTradeTokens", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			await tokenA.transfer(dex1addr, initialDexReserve);			
@@ -1042,10 +1042,10 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, routeData1[0].asset, routeData1, initialDexReserve, shouldGainAmount);			
 				;
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
             expect(tokenBalance).to.be.above(initialBalance);
 			expect(tokenBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
 			const tokenTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
@@ -1055,7 +1055,7 @@ describe("Overall Test", function () {
 		
         it("Should revert a V4-V2 token InstaTradeTokens with a loss", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);			
 
@@ -1084,11 +1084,11 @@ describe("Overall Test", function () {
 			
         it("Should perform a V2-V4 token InstaTradeTokens", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			await tokenA.transfer(dex1addr, initialDexReserve);			
@@ -1105,10 +1105,10 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, routeData1[0].asset, routeData1, initialDexReserve, shouldGainAmount);			
 				;
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
             expect(tokenBalance).to.be.above(initialBalance);
 			expect(tokenBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
 			const tokenTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
@@ -1118,7 +1118,7 @@ describe("Overall Test", function () {
 		
         it("Should revert a V2-V4 token InstaTradeTokens with a loss", async function () {
 
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);			
 
@@ -1161,7 +1161,7 @@ describe("Overall Test", function () {
 			//const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
 			//expect(initialTotalBalance).to.be.equal(initialEthBalance);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, 2*initialPrice, poolFee);
@@ -1194,7 +1194,7 @@ describe("Overall Test", function () {
 			await Trade.connect(addr1).withdrawToken(NATIVE_TOKEN, shouldGainAmount);
 			await nativeToken.connect(addr1).withdraw(shouldGainAmount);				
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
             const finalBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();
@@ -1214,7 +1214,7 @@ describe("Overall Test", function () {
 			//const initialTotalBalance = await Trade.connect(addr1).getTotalEtherBalance();
 			//expect(initialTotalBalance).to.be.equal(initialEthBalance);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			await dex1.setPairInfo(tokenAaddr, NATIVE_TOKEN, 2*initialPrice, poolFee);
@@ -1244,7 +1244,7 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, ZERO_ADDRESS, routeData, initialEthBalance, shouldGainAmount);			
 				;				
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
             const finalBalance = await ethers.provider.getBalance(addr1); //Trade.connect(addr1).getEtherBalance();
@@ -1343,11 +1343,11 @@ describe("Overall Test", function () {
 
             // should already use the 'common' deposited amount
 			//await Trade.depositEther({ value: initialPrice });
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			// add tokenB extra reserve for dex2
@@ -1365,10 +1365,10 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, ZERO_ADDRESS, routeData, initialDexReserve, shouldGainAmount);			
 				;           			
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
             expect(tokenBalance).to.be.above(initialBalance);
 			expect(tokenBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
 			const tokenTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
@@ -1380,7 +1380,7 @@ describe("Overall Test", function () {
 
             // should already use the 'common' deposited amount
 			//await Trade.depositEther({ value: initialPrice });								
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);			
 			
@@ -1413,11 +1413,11 @@ describe("Overall Test", function () {
 
             // should already use the 'common' deposited amount
 			//await Trade.depositEther({ value: initialPrice });
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);
 			
-			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalanceA = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			
 			// add tokenB extra reserve for dex2
@@ -1436,10 +1436,10 @@ describe("Overall Test", function () {
                 //.withArgs(addr1.address, ZERO_ADDRESS, routeData, initialDexReserve, shouldGainAmount);			
 				;           			
             
-			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr));
+			expect(initialBalanceA).to.be.equal(await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1));
 			expect(initialTotalBalanceA).to.be.equal(await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr));
 
-            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr);
+            const tokenBalance = await Trade.connect(addr1).getTokenBalance(tokenBaddr, addr1);
             expect(tokenBalance).to.be.above(initialBalance);
 			expect(tokenBalance).to.be.equal(initialBalance + BigInt(shouldGainAmount));
 			const tokenTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenBaddr);
@@ -1451,7 +1451,7 @@ describe("Overall Test", function () {
 
             // should already use the 'common' deposited amount
 			//await Trade.depositEther({ value: initialPrice });								
-			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr);
+			const initialBalance = await Trade.connect(addr1).getTokenBalance(tokenAaddr, addr1);
 			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
 			expect(initialTotalBalance).to.be.equal(initialDexReserve);			
 			
@@ -1483,6 +1483,118 @@ describe("Overall Test", function () {
         });		
 
     });	
+	
+	describe("InstaTradeTokens Other Miscellaneus Functions", function () {
+			
+        it("Should NOT revert a token 2dex InstaTradeTokens V2-V2 with a loss", async function () {
+
+			await tokenA.transfer(addr1, initialDexReserve);
+			await tokenA.connect(addr1).approve(TradeAddr, initialDexReserve);
+			await Trade.connect(addr1).depositToken(tokenAaddr, initialDexReserve);
+            const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr,  addr1);
+			expect(initialBalanceA).to.be.equal(initialDexReserve);	
+			
+			const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
+			expect(initialTotalBalance).to.be.equal(BigInt(2)*initialDexReserve);			
+			
+			// add tokenB extra reserve for dex2
+			await tokenA.transfer(dex2addr, initialDexReserve);			
+			await tokenB.transfer(dex1addr, initialDexReserve);			
+			await dex2.setPairInfo(tokenAaddr, tokenBaddr, initialPrice/2, poolFee);
+			const shouldGainAmount = initialDexReserve;
+			
+            const routeData = [
+                { Itype: IU_V2_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0  },
+                { Itype: IU_V2_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0  }
+            ]
+			await Trade.connect(addr1).InstaTradeTokensChecked(routeData, initialDexReserve, 0, false)
+
+			const finalTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
+			expect(initialTotalBalance).to.be.above(finalTotalBalance);	
+            const finalBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr,  addr1);
+			expect(initialBalanceA).to.be.above(finalBalanceA);				
+        });		
+		
+        it("Should NOT revert a token 2dex InstaTradeTokens V2-V2 with 0 gain", async function () {
+			
+			await tokenA.transfer(addr1, initialDexReserve);
+			await tokenA.connect(addr1).approve(TradeAddr, initialDexReserve);
+			await Trade.connect(addr1).depositToken(tokenAaddr, initialDexReserve);
+            const initialBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr,  addr1);
+			expect(initialBalanceA).to.be.equal(initialDexReserve);				
+			
+            const initialTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
+			expect(initialTotalBalance).to.be.equal(BigInt(2)*initialDexReserve);	
+			
+			const routeData = [
+                { Itype: IU_V2_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0  },
+                { Itype: IU_V2_POOL, router: dex2addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0  }
+            ]
+			await Trade.connect(addr1).InstaTradeTokensChecked(routeData, initialDexReserve, 0, false)
+				
+			const finalTotalBalance = await Trade.connect(addr1).getTotalTokenBalance(tokenAaddr);
+			expect(initialTotalBalance).to.be.equal(finalTotalBalance);	
+            const finalBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr,  addr1);
+			expect(finalBalanceA).to.be.equal(initialBalanceA);				
+        });
+		
+       it("InstaSwapTokens Token to Token", async function () {
+		
+			await tokenA.approve(TradeAddr, initialDexReserve);
+			await Trade.depositToken(tokenAaddr, initialDexReserve);								
+			const initialBalanceA = await Trade.getTokenBalance(tokenAaddr, owner);
+			expect(initialBalanceA).to.be.equal(BigInt(2)*initialDexReserve);	
+			const initialBalanceB = await Trade.getTokenBalance(tokenBaddr, owner);
+			expect(initialBalanceB).to.be.equal(initialDexReserve);	
+					
+            const routeChain = { Itype: IU_V2_POOL, router: dex1addr, asset: tokenAaddr, poolFee: poolFee, tickSpacing: 0  }
+
+			await Trade.InstaSwapTokens(routeChain, initialDexReserve, tokenBaddr, 0);
+
+			const finalBalanceA = await Trade.getTokenBalance(tokenAaddr, owner);
+			expect(initialBalanceA).to.be.above(finalBalanceA);	
+			const finalBalanceB = await Trade.getTokenBalance(tokenBaddr, owner);
+			expect(finalBalanceB).to.be.above(initialBalanceB);
+        });		
+
+       it("InstaSwapTokens Ether to Token", async function () {
+							
+			const initialBalanceN = await Trade.getTokenBalance(NATIVE_TOKEN, owner);
+			await Trade.withdrawToken(NATIVE_TOKEN, initialBalanceN);
+			
+			await nativeToken.deposit({value: initialEthBalance});
+			await nativeToken.transfer(dex1addr, initialEthBalance);			
+			 
+			const initialBalanceB = await Trade.getTokenBalance(tokenBaddr, owner);
+			expect(initialBalanceB).to.be.equal(initialDexReserve);	
+					
+            const routeChain = { Itype: IU_V2_POOL, router: dex1addr, asset: NATIVE_TOKEN, poolFee: poolFee, tickSpacing: 0  }
+
+			await Trade.InstaSwapTokens( routeChain, initialDexReserve, tokenBaddr, 0, { value : initialDexReserve });
+
+			const finalBalanceB = await Trade.getTokenBalance(tokenBaddr, owner);
+			expect(finalBalanceB).to.be.above(initialBalanceB);
+        });			
+
+       it("InstaSwapTokens Token to Ether", async function () {
+							
+			await nativeToken.connect(addr1).deposit({value: initialDexReserve});
+			await nativeToken.connect(addr1).transfer(dex1addr, initialDexReserve);	
+			
+			const initialBalance = await ethers.provider.getBalance(owner);
+			
+			const initialBalanceB = await Trade.getTokenBalance(tokenBaddr, owner);
+			expect(initialBalanceB).to.be.equal(initialDexReserve);	
+					
+            const routeChain = { Itype: IU_V2_POOL, router: dex1addr, asset: tokenBaddr, poolFee: poolFee, tickSpacing: 0  }
+
+			await Trade.InstaSwapTokens( routeChain, initialDexReserve, ZERO_ADDRESS, 0);
+
+			const finalBalance = await ethers.provider.getBalance(owner);
+			expect(finalBalance).to.be.above(initialBalance);
+        });	
+
+    });		
 	
 });
 
