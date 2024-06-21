@@ -4,18 +4,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-/*
-const weiToEther = (n) => {
-    return web3.utils.fromWei(n.toString(), 'ether');
-}
-
-async function getGasCosts(receipt) {
-    const tx = await web3.eth.getTransaction(receipt.tx);  
-    const gasPrice = new BN(tx.gasPrice);
-    return gasPrice.mul(new BN(receipt.receipt.gasUsed));
-}    
-*/
-
 describe("Overall Test", function () {	
 		
 	let nativeToken;
@@ -216,40 +204,6 @@ describe("Overall Test", function () {
 	  });
 	});	
 	
-    /*
-	describe("Ether Deposits and Withdrawals", function () {
-        it("Should deposit Ether", async function () {
-			// already done in beforeEach
-            //await Trade.depositEther({ value: initialEthBalance });
-            expect(await Trade.getEtherBalance()).to.equal(initialEthBalance);
-        });
-
-        it("Should withdraw Ether", async function () {
-			// already done in beforeEach
-            //await Trade.depositEther({ value: initialEthBalance });
-            await Trade.withdrawEther(initialEthBalance);
-            expect(await Trade.getEtherBalance()).to.equal(0);
-        });
-
-        it("Should emit DepositEther event", async function () {
-            await expect(Trade.depositEther({ value: initialEthBalance }))
-                .to.emit(Trade, "DepositEther")
-                .withArgs(owner.address, initialEthBalance);
-        });
-
-        it("Should emit WithdrawEther event", async function () {
-            await Trade.depositEther({ value: initialEthBalance });
-            await expect(Trade.withdrawEther(initialEthBalance))
-                .to.emit(Trade, "WithdrawEther")
-                .withArgs(owner.address, initialEthBalance);
-        });
-
-        it("Should revert if Ether balance is insufficient", async function () {
-            await expect(Trade.withdrawEther(ethers.parseEther("4.0"))).to.be.revertedWith("Insufficient Ether balance");
-        });		
-    });
-	*/
-
     describe("Token Deposits and Withdrawals", function () {
         it("Should deposit tokens", async function () {
 			// already done in beforeEach
@@ -1486,7 +1440,8 @@ describe("Overall Test", function () {
 	
 	describe("InstaTradeTokens Other Miscellaneus Functions", function () {
 			
-        it("Should NOT revert a token 2dex InstaTradeTokens V2-V2 with a loss", async function () {
+        /*
+		it("Should NOT revert a token 2dex InstaTradeTokens V2-V2 with a loss", async function () {
 
 			await tokenA.transfer(addr1, initialDexReserve);
 			await tokenA.connect(addr1).approve(TradeAddr, initialDexReserve);
@@ -1537,6 +1492,7 @@ describe("Overall Test", function () {
             const finalBalanceA = await Trade.connect(addr1).getTokenBalance(tokenAaddr,  addr1);
 			expect(finalBalanceA).to.be.equal(initialBalanceA);				
         });
+		*/
 		
        it("InstaSwapTokens Token to Token", async function () {
 		

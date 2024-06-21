@@ -17,7 +17,7 @@ contract Trade is Deposit {
 		NATIVE_TOKEN = payable(native_token);
     }
   
-    function _tradeToken(routeChain calldata routeTo, address _tokenOut, uint256 amountIn, uint deadlineDeltaSec, uint256 initialBalance, bool checkProfit) internal returns (uint256 tradeableAmount) {
+    function _tradeToken(routeChain calldata routeTo, address _tokenOut, uint256 amountIn, uint deadlineDeltaSec, uint256 initialBalance/*, bool checkProfit*/) internal returns (uint256 tradeableAmount) {
 		address _tokenIn = (address(0x0) == routeTo.asset) ? NATIVE_TOKEN : routeTo.asset;
 		if (address(0x0) == _tokenOut) {
 			_tokenOut = NATIVE_TOKEN;
@@ -27,12 +27,12 @@ contract Trade is Deposit {
         _swapToken(routeTo, _tokenOut, amountIn, deadlineDeltaSec);
 		
 		uint256 afterBalance = IERC20(_tokenOut).balanceOf(address(this));
-		if (checkProfit) {
+		//if (checkProfit) {
 			require(afterBalance > initialBalance, "Trade Reverted, No Profit Made");		
-		} else if (afterBalance < initialBalance) {
-			tokenBalances[_tokenOut][msg.sender] = tokenBalances[_tokenOut][msg.sender] - (initialBalance - afterBalance);
-			return 0;
-		}	
+		//} else if (afterBalance < initialBalance) {
+		//	tokenBalances[_tokenOut][msg.sender] = tokenBalances[_tokenOut][msg.sender] - (initialBalance - afterBalance);
+		//	return 0;
+		//}	
 		return afterBalance - initialBalance;
     }    
 	
@@ -45,8 +45,7 @@ contract Trade is Deposit {
 
 		IERC20(_tokenIn).approve(routeTo.router, _amountIn);
 		uint deadline = block.timestamp + deadlineDeltaSec; 		
-		if (routeTo.Itype == DexInterfaceType.IUniswapV4PoolManager) {
-	
+		if (routeTo.Itype == DexInterfaceType.IUniswapV4PoolManager) {	
 			// routeTo.poolFee == 0x800000 // dynamic fee
 			// experimental..
 			IUniswapV4PoolManager.PoolKey memory pool = IUniswapV4PoolManager.PoolKey({
@@ -96,25 +95,16 @@ contract Trade is Deposit {
 			path = new address[](2);
 			path[0] = _tokenIn;
 			path[1] = _tokenOut;			
-			//if (address(0x0) == _tokenIn) {
-			//	path[0] = NativeTOKEN(routeTo.Itype, routeTo.router);			
-			//	IUniswapV2Router0102(routeTo.router).swapExactETHForTokens{value: _amountIn}(0, path, address(this), deadline);
-			//} else if (address(0x0) == _tokenOut) {
-			//	path[1] = NativeTOKEN(routeTo.Itype, routeTo.router);			
-			//	IUniswapV2Router0102(routeTo.router).swapExactTokensForETH(_amountIn, 0, path, address(this), deadline);
-			//} else {
-				IUniswapV2Router0102(routeTo.router).swapExactTokensForTokens(_amountIn, 0, path, address(this), deadline);    
-			//}
+			IUniswapV2Router0102(routeTo.router).swapExactTokensForTokens(_amountIn, 0, path, address(this), deadline);    
         } else { //  if (routeTo.Itype == DexInterfaceType.IQuickswapV3RouterQuoter) {
 			IQuickswapV3Router(routeTo.router).exactInputSingle(_tokenIn, _tokenOut, address(this), deadline, _amountIn, 0, 0);
 		}
     }    
 
 	function InstaTradeTokens(routeChain[] calldata _routedata, uint256 _startAmount, uint deadlineDeltaSec) public payable {
-		InstaTradeTokensChecked(_routedata, _startAmount, deadlineDeltaSec, true);
-	}
-	
-    function InstaTradeTokensChecked(routeChain[] calldata _routedata, uint256 _startAmount, uint deadlineDeltaSec, bool checkProfit) public payable {
+	//	InstaTradeTokensChecked(_routedata, _startAmount, deadlineDeltaSec, true);
+	//}	
+    //function InstaTradeTokensChecked(routeChain[] calldata _routedata, uint256 _startAmount, uint deadlineDeltaSec, bool checkProfit) public payable {
 		require ( _routedata.length > 1, "Invalid param");
 		address tokenIn = (address(0x0) == _routedata[0].asset) ? NATIVE_TOKEN : _routedata[0].asset;
 		if (NATIVE_TOKEN == tokenIn) {
@@ -125,11 +115,11 @@ contract Trade is Deposit {
         }
         uint256 startBalance = IERC20(tokenIn).balanceOf(address(this));
 		require(startBalance >= _startAmount, "Insufficient Token balance");
-		if (!checkProfit) {
-			require(_startAmount <= tokenBalances[tokenIn][msg.sender], "Insufficient Token balance");
-		}
+		//if (!checkProfit) {
+		//	require(_startAmount <= tokenBalances[tokenIn][msg.sender], "Insufficient Token balance");
+		//}
 		
-		uint256 gainedAmount = _instaTradeTokens(_routedata, _startAmount, startBalance, deadlineDeltaSec, checkProfit);			
+		uint256 gainedAmount = _instaTradeTokens(_routedata, _startAmount, startBalance, deadlineDeltaSec/*, checkProfit*/);			
 		depositTokenSucceded(msg.sender, tokenIn, gainedAmount);
 		if ((address(0x0) == _routedata[0].asset) && (msg.value == _startAmount)) {
 			uint amount = msg.value + gainedAmount;
@@ -171,7 +161,7 @@ contract Trade is Deposit {
 		}
     } 	
 	
-    function _instaTradeTokens(routeChain[] calldata _routedata, uint256 _amount, uint256 _startBalance, uint deadlineDeltaSec, bool checkProfit) internal returns (uint256 gainedAmount) {
+    function _instaTradeTokens(routeChain[] calldata _routedata, uint256 _amount, uint256 _startBalance, uint deadlineDeltaSec/*, bool checkProfit*/) internal returns (uint256 gainedAmount) {
 		uint256[] memory balance = new uint256[](_routedata.length);
 		for (uint b=1; b < _routedata.length; b++) {
 			if (address(0x0) == _routedata[b].asset) {
@@ -185,9 +175,9 @@ contract Trade is Deposit {
 		uint256 tradeableAmount = _amount;
 		uint i = 0;
 		for (i; i < _routedata.length-1; i++) {
-			tradeableAmount = _tradeToken(_routedata[i], _routedata[i+1].asset, tradeableAmount, deadlineDeltaSec, balance[i], checkProfit);
+			tradeableAmount = _tradeToken(_routedata[i], _routedata[i+1].asset, tradeableAmount, deadlineDeltaSec, balance[i]/*, checkProfit*/);
 		}
-		tradeableAmount = _tradeToken(_routedata[i], _routedata[0].asset, tradeableAmount, deadlineDeltaSec, balance[i], checkProfit);
+		tradeableAmount = _tradeToken(_routedata[i], _routedata[0].asset, tradeableAmount, deadlineDeltaSec, balance[i]/*, checkProfit*/);
 		return tradeableAmount;
     }
 		

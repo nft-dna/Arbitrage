@@ -8,6 +8,8 @@ import (
     //"log"
     "math/big"
     "strings"
+	"os"
+	"log"
 	//"encoding/hex"
     //"github.com/ethereum/go-ethereum"
     "github.com/ethereum/go-ethereum/accounts/abi"
@@ -15,11 +17,12 @@ import (
     "github.com/ethereum/go-ethereum/common"
     //"github.com/ethereum/go-ethereum/core/types"
     "github.com/ethereum/go-ethereum/ethclient"
+	"github.com/joho/godotenv"
 )
 
 const (
-	//zero address				= "0x0000000000000000000000000000000000000000"
-	
+	zero_address				= "0x0000000000000000000000000000000000000000"
+	/*
 	// Polygon
 	NetworkRPC					= "https://polygon-rpc.com"
 	UniswapV2RouterAddress		= "0xedf6066a2b290C185783862C7F4776A2C8077AD1"
@@ -40,6 +43,7 @@ const (
 	RNDRAddress					= "0x61299774020dA444Af134c82fa83E3810b309991"
 	//TradeAdddress				= "0x733641642aFDf6B5574f2af7969bfBe5730a8daB"
 	TradeAdddress				= "0x9CC50ffCF5E76689E74AAC9B3353A0f4c62215E0"
+	*/
 	/*
 	0xedf6066a2b290C185783862C7F4776A2C8077AD1 Uniswap V2Router Contract Address 
 	0xE592427A0AEce92De3Edee1F18E0157C05861564 Uniswap V3Router
@@ -72,7 +76,7 @@ const (
 	*/
 
 	
-	quoteAmount				= 1000000000000000000	// 1 Token (in wei)
+	//quoteAmount				= 1000000000000000000	// 1 Token (in wei)
 	
 	UniswapV2RouterABI		= "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_factory\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_WETH\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"WETH\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenA\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenB\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amountADesired\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountBDesired\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountAMin\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountBMin\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"addLiquidity\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountB\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"liquidity\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amountTokenDesired\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountTokenMin\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountETHMin\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"addLiquidityETH\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountToken\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountETH\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"liquidity\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"factory\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserveIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserveOut\",\"type\":\"uint256\"}],\"name\":\"getAmountIn\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserveIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserveOut\",\"type\":\"uint256\"}],\"name\":\"getAmountOut\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"path\",\"type\":\"address[]\"}],\"name\":\"getAmountsIn\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"path\",\"type\":\"address[]\"}],\"name\":\"getAmountsOut\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserveA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserveB\",\"type\":\"uint256\"}],\"name\":\"quote\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountB\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenA\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenB\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"liquidity\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountAMin\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountBMin\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"removeLiquidity\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountB\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"liquidity\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountTokenMin\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountETHMin\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"removeLiquidityETH\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountToken\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountETH\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"liquidity\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountTokenMin\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountETHMin\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"removeLiquidityETHSupportingFeeOnTransferTokens\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountETH\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"liquidity\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountTokenMin\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountETHMin\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"approveMax\",\"type\":\"bool\"},{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"name\":\"removeLiquidityETHWithPermit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountToken\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountETH\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"liquidity\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountTokenMin\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountETHMin\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"approveMax\",\"type\":\"bool\"},{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"name\":\"removeLiquidityETHWithPermitSupportingFeeOnTransferTokens\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountETH\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenA\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenB\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"liquidity\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountAMin\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountBMin\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"approveMax\",\"type\":\"bool\"},{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"name\":\"removeLiquidityWithPermit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountB\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"path\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapETHForExactTokens\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOutMin\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"path\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapExactETHForTokens\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOutMin\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"path\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapExactETHForTokensSupportingFeeOnTransferTokens\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountOutMin\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"path\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapExactTokensForETH\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountOutMin\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"path\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapExactTokensForETHSupportingFeeOnTransferTokens\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountOutMin\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"path\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapExactTokensForTokens\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountOutMin\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"path\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapExactTokensForTokensSupportingFeeOnTransferTokens\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountInMax\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"path\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapTokensForExactETH\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountInMax\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"path\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapTokensForExactTokens\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
 	UniswapV2FactoryABI		= "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenA\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenB\",\"type\":\"address\"}],\"name\":\"getPair\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"pair\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
@@ -92,6 +96,237 @@ const (
 		
 )
 
+type DexInterfaceType int
+
+const (
+    IUniswapV2Router DexInterfaceType = iota
+	IUniswapV3RouterQuoter01
+	IUniswapV3RouterQuoter02
+	IUniswapV4PoolManager
+	IQuickswapV3RouterQuoter
+)
+
+var dexInterfaceTypeMap = map[string]DexInterfaceType{
+    "IUniswapV2Router": IUniswapV2Router,
+    "IUniswapV3RouterQuoter01": IUniswapV3RouterQuoter01,
+    "IUniswapV3RouterQuoter02": IUniswapV3RouterQuoter02,
+	"IUniswapV4PoolManager": IUniswapV4PoolManager,
+	"IQuickswapV3RouterQuoter": IQuickswapV3RouterQuoter,
+}
+
+type DexRouter struct {
+    DexInterface		DexInterfaceType
+    Name				string	
+	RouterAddress		string	
+	QuoterAddress		string	
+}
+
+type Contract struct {
+    Name				string	
+	Address				string	
+}
+
+func (c DexInterfaceType) String() string {
+    switch c {
+    case IUniswapV2Router:
+        return "IUniswapV2Router"
+    case IUniswapV3RouterQuoter01:
+        return "IUniswapV3RouterQuoter01"
+    case IUniswapV3RouterQuoter02:
+        return "IUniswapV3RouterQuoter02"
+    case IUniswapV4PoolManager:
+        return "IUniswapV4PoolManager"		
+    case IQuickswapV3RouterQuoter:
+        return "IQuickswapV3RouterQuoter"			
+    default:
+        return "Unknown"
+    }
+}
+
+func (c DexInterfaceType) Int() uint8 {
+    switch c {
+    case IUniswapV2Router:
+        return 0
+    case IUniswapV3RouterQuoter01:
+        return 1
+    case IUniswapV3RouterQuoter02:
+        return 2
+    case IUniswapV4PoolManager:
+        return 3		
+    case IQuickswapV3RouterQuoter:
+        return 4			
+    default:
+        return 0
+    }
+}
+
+func loadNetwork() (string, string, string, bool, error) {
+    // Load the .env file
+    err := godotenv.Load()
+    if err != nil {
+        return "", "", "", false, fmt.Errorf("error loading .env file: %v", err)
+    }
+	
+	networkStr := os.Getenv("NETWORK")	
+    if networkStr == "" {
+        return "", "", "", false, fmt.Errorf("NETWORK not set in the .env file")
+    }
+	
+	rpcStr := os.Getenv(networkStr+"_RPC")	
+    if rpcStr == "" {
+        return "", "", "", false, fmt.Errorf("%s_RPC not set in the .env file", networkStr)
+    }
+	
+	quoteAmountStr := os.Getenv("QUOTE_AMOUNT")	
+    if quoteAmountStr == "" {
+        return "", "", "", false, fmt.Errorf("QUOTE_AMOUNT not set in the .env file")
+    }	
+	
+	search_mixed_pools := false
+	search_mixed_poolsStr := os.Getenv("SEARCH_MIXED_POOLS")
+	if (search_mixed_poolsStr == "") {
+		fmt.Printf("WARN: SEARCH_MIXED_POOLS not set in the .env file")
+	}
+	if (search_mixed_poolsStr == "YES") {
+		search_mixed_pools = true
+	}
+	
+	return networkStr, rpcStr, quoteAmountStr, search_mixed_pools, nil;
+}
+
+func loadTradeAddress(prefix string) (string, error) {
+    // Load the .env file
+    err := godotenv.Load()
+    if err != nil {
+        return "", fmt.Errorf("error loading .env file: %v", err)
+    }
+	
+	tradeStr := os.Getenv(prefix+"_TRADE")	
+    if tradeStr == "" {
+        fmt.Printf("WARN: %_TRADE not set in the .env file", prefix)
+    }	
+	
+	return tradeStr, nil;
+}
+
+func loadDexRouters(prefix string) ([]DexRouter, error) {
+    // Load the .env file
+    err := godotenv.Load()
+    if err != nil {
+        return nil, fmt.Errorf("error loading .env file: %v", err)
+    }
+	
+    elementsStr := os.Getenv(prefix + "_DEXROUTERS")
+    if elementsStr == "" {
+        return nil, fmt.Errorf("%s_DEXROUTERS not set in the .env file", prefix)
+    }
+
+    // Split the elements by comma
+    elementsArray := strings.Split(elementsStr, ",")
+
+    // Create a slice of DexRouter structs
+    elements := make([]DexRouter, len(elementsArray))
+    for i, elem := range elementsArray {
+        parts := strings.Split(strings.TrimSpace(elem), ":")
+        if len(parts) != 4 {
+            return nil, fmt.Errorf("invalid element format: %s", elem)
+        }
+        dexInterface, exists := dexInterfaceTypeMap[parts[0]]
+        if !exists {
+            return nil, fmt.Errorf("invalid dexInterface for element %u: %s", i, parts[0])
+        }		
+        name := parts[1]
+		routerAddress := parts[2]
+		quoterAddress := parts[3]
+        elements[i] = DexRouter{DexInterface: dexInterface, Name: name, RouterAddress: routerAddress, QuoterAddress : quoterAddress }
+    }
+
+    return elements, nil
+}
+
+func loadNativeToken(prefix string) (Contract, error) {
+    // Load the .env file
+    err := godotenv.Load()
+    if err != nil {
+        return Contract{}, fmt.Errorf("error loading .env file: %v", err)
+    }
+	
+    elementsStr := os.Getenv(prefix + "_NATIVE")
+    if elementsStr == "" {
+        return Contract{}, fmt.Errorf("%s_NATIVE not set in the .env file", prefix)
+    }
+
+    parts := strings.Split(strings.TrimSpace(elementsStr), ":")
+    if len(parts) != 2 {
+        return Contract{}, fmt.Errorf("invalid element format: %s", elementsStr)
+    }
+    name := parts[0]
+	address := parts[1]
+    element := Contract{Name: name, Address: address}
+
+    return element, nil
+}
+
+func loadStableTokens(prefix string) ([]Contract, error) {
+    // Load the .env file
+    err := godotenv.Load()
+    if err != nil {
+        return nil, fmt.Errorf("error loading .env file: %v", err)
+    }
+	
+    elementsStr := os.Getenv(prefix + "_STABLES")
+    if elementsStr == "" {
+        return nil, nil//fmt.Errorf("%s_STABLES not set in the .env file", prefix)
+    }
+
+    // Split the elements by comma
+    elementsArray := strings.Split(elementsStr, ",")
+
+    // Create a slice of DexRouter structs
+    elements := make([]Contract, len(elementsArray))
+    for i, elem := range elementsArray {
+        parts := strings.Split(strings.TrimSpace(elem), ":")
+        if len(parts) != 2 {
+            return nil, fmt.Errorf("invalid element format: %s", elem)
+        }
+        name := parts[0]
+		address := parts[1]
+        elements[i] = Contract{Name: name, Address: address}
+    }
+
+    return elements, nil
+}
+
+func loadTestTokens(prefix string) ([]Contract, error) {
+    // Load the .env file
+    err := godotenv.Load()
+    if err != nil {
+        return nil, fmt.Errorf("error loading .env file: %v", err)
+    }
+	
+    elementsStr := os.Getenv(prefix + "_TOKENS")
+    if elementsStr == "" {
+        return nil, fmt.Errorf("%s_TOKENS not set in the .env file", prefix)
+    }
+
+    // Split the elements by comma
+    elementsArray := strings.Split(elementsStr, ",")
+
+    // Create a slice of DexRouter structs
+    elements := make([]Contract, len(elementsArray))
+    for i, elem := range elementsArray {
+        parts := strings.Split(strings.TrimSpace(elem), ":")
+        if len(parts) != 2 {
+            return nil, fmt.Errorf("invalid element format: %s", elem)
+        }
+        name := parts[0]
+		address := parts[1]
+        elements[i] = Contract{Name: name, Address: address}
+    }
+
+    return elements, nil
+}
+
 func SortAddresses(addr1, addr2 common.Address) (common.Address, common.Address) {
     addresses := []common.Address{addr1, addr2}
     sort.Slice(addresses, func(i, j int) bool {
@@ -107,8 +342,8 @@ func toEther(wei *big.Int) float64 {
     return value
 }
 
-func createClient() (*ethclient.Client, error) {
-    client, err := ethclient.Dial(NetworkRPC)
+func createClient(rpc string) (*ethclient.Client, error) {
+    client, err := ethclient.Dial(rpc)
     if err != nil {
         return nil, fmt.Errorf("failed to connect to the Ethereum client: %v", err)
     }
@@ -201,21 +436,22 @@ func quoteExactInputSingle(client *ethclient.Client, router common.Address, useV
     }
 
     // Call the quoteExactInputSingle function
+	//fee_32 := uint32(fee.Uint64())
+		
 	var result []interface{}
 	if (useV2) {
 		// Set up the input parameters
-		fee_32 := uint32(fee.Uint64())
 		sqrtPriceLimitX96_160, _ := new(big.Int).SetString(sqrtPriceLimitX96.String(), 10)
 		params := struct {
 			TokenIn         common.Address
 			TokenOut        common.Address
-			Fee             uint32
+			Fee             *big.Int//uint32
 			Amount			*big.Int
 			SqrtPriceLimitX96 *big.Int
 		}{
 			TokenIn:         path[0],
 			TokenOut:        path[1],
-			Fee:             fee_32,
+			Fee:             fee,//_32,
 			Amount:			 amountIn,
 			SqrtPriceLimitX96: sqrtPriceLimitX96_160,
 		}
@@ -228,7 +464,7 @@ func quoteExactInputSingle(client *ethclient.Client, router common.Address, useV
 			Context: context.Background(),
 		}, &result, "quoteExactInputSingle", input)
 		if err != nil {
-			fmt.Printf("Failed to call contract function: %v\n", err)
+			fmt.Printf("Failed to call V2 contract function: %v\n", err)
 			return quote, err
 		}
 	
@@ -237,7 +473,7 @@ func quoteExactInputSingle(client *ethclient.Client, router common.Address, useV
 			Context: context.Background(),
 		}, &result, "quoteExactInputSingle", path[0], path[1], fee, amountIn, sqrtPriceLimitX96)
 		if err != nil {
-			fmt.Printf("Failed to call contract function: %v\n", err)
+			fmt.Printf("Failed to call V1 contract function: %v\n", err)
 			return quote, err
 		}
 	}
@@ -384,17 +620,20 @@ func getV2PriceImpact(client *ethclient.Client, routerAddress common.Address, am
 	sortedAddress1, sortedAddress2 := SortAddresses(tokenA, tokenB)
   
     pairAddress, err := getV2PairAddress(client, routerAddress, sortedAddress1, sortedAddress2)
-    if err != nil {
-        fmt.Errorf("Failed to get pair address: %vv", err)
-		return nil, nil, err
+    if err != nil {        
+		return nil, nil, fmt.Errorf("Failed to get pair address: %v", err)
     }
+	
+	if (pairAddress.String() == zero_address) {
+		return nil, nil, fmt.Errorf("Empty pair address")
+	}
 	
     reserve0, reserve1, err := getV2Reserves(client, pairAddress)
     if err != nil {
         fmt.Errorf("Failed to get reserves: %v\n", err)
 		return nil, nil, err
     }
-	fmt.Printf("V2 Reserves: %s - %s\n", reserve0.String(), reserve1.String())
+	fmt.Printf("   V2 Reserves: %.9f - %.9f\n", toEther(reserve0), toEther(reserve1))
 
     price, priceImpact := calculateV2PriceImpact(amountIn, reserve0, reserve1)
 	return price, priceImpact, nil		
@@ -424,27 +663,27 @@ func findV3PoolAddress(client *ethclient.Client, quoterAddress common.Address, t
 	//fmt.Printf("findV3PoolAddress\n")
 	
 	addr, err := getV3PoolAddress(client, quoterAddress, tokenA, tokenB, big.NewInt(3000))
-	if (err == nil) {
+	if (err == nil && addr.String() != zero_address) {
 		return addr, big.NewInt(3000), nil		
 	}
 		
 	addr, err = getV3PoolAddress(client, quoterAddress, tokenA, tokenB, big.NewInt(500))
-	if (err == nil) {
+	if (err == nil && addr.String() != zero_address) {
 		return addr, big.NewInt(500), nil
 	}
 
 	addr, err = getV3PoolAddress(client, quoterAddress, tokenA, tokenB, big.NewInt(1000))
-	if (err == nil) {
+	if (err == nil && addr.String() != zero_address) {
 		return addr, big.NewInt(1000), nil	
 	}
 		
 	addr, err = getV3PoolAddress(client, quoterAddress, tokenA, tokenB, big.NewInt(10000))
-	if (err == nil) {
+	if (err == nil && addr.String() != zero_address) {
 		return addr, big.NewInt(10000), nil			
 	}
 	
 	addr, err = getV3PoolAddress(client, quoterAddress, tokenA, tokenB, nil)
-	if (err == nil) {
+	if (err == nil && addr.String() != zero_address) {
 		return addr, nil, nil		
 	}	
 		
@@ -658,16 +897,16 @@ func calculateV3Reserves(sqrtPriceX96 *big.Int, liquidity *big.Int) (*big.Int, *
     return reserve0, reserve1
 }
 
-func getV3AlgebraPoolGlobalStateAndLiquidity(client *ethclient.Client, poolAddress common.Address) (*big.Int, *big.Int, *big.Int, error) {
+func getV3AlgebraPoolGlobalStateAndLiquidity(client *ethclient.Client, poolAddress common.Address) (*big.Int, *big.Int, *big.Int, *big.Int, bool, error) {
     poolABI, err := abi.JSON(strings.NewReader(QuickswapAlgebraPoolABI))
     if err != nil {
-        return nil, nil, nil, fmt.Errorf("failed to parse ABI: %v", err)
+        return nil, nil, nil, nil, false, fmt.Errorf("failed to parse ABI: %v", err)
     }
 	
 	PoolContract := bind.NewBoundContract(poolAddress, poolABI, client, client, client)
     if err != nil {
         fmt.Printf("Failed to bind to Contract: %v\n", err)
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, false, err
     }
 	
 	var resultl []interface{}
@@ -676,7 +915,7 @@ func getV3AlgebraPoolGlobalStateAndLiquidity(client *ethclient.Client, poolAddre
 	}, &resultl, "liquidity")
 	if err != nil {
 		fmt.Printf("Failed to call contract function: %v\n", err)
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, false, err
 	}	
 	
     liquidity := *abi.ConvertType(resultl[0], new(*big.Int)).(**big.Int)	
@@ -687,13 +926,26 @@ func getV3AlgebraPoolGlobalStateAndLiquidity(client *ethclient.Client, poolAddre
 	}, &resultg, "globalState")
 	if err != nil {
 		fmt.Printf("Failed to call contract function: %v\n", err)
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, false, err
 	}
-	
+
+	/*
+	var globalState struct {
+        Price            *big.Int
+        Tick             int32
+        Fee              uint16
+        TimepointIndex   uint16
+        CommunityFeeToken0 uint8
+        CommunityFeeToken1 uint8
+        Unlocked         bool
+    }
+	*/	
 	price := *abi.ConvertType(resultg[0], new(*big.Int)).(**big.Int)	
 	tick := *abi.ConvertType(resultg[1], new(*big.Int)).(**big.Int)	
+	fee := *abi.ConvertType(resultg[2], new(uint16)).(*uint16)	
+	unlocked := *abi.ConvertType(resultg[6], new(bool)).(*bool)	
 
-    return price, tick, liquidity, nil
+    return price, tick, liquidity, big.NewInt((int64)(fee)), unlocked, nil
 }
 
 func calculateV3AlgebraPoolReserves(price *big.Int, liquidity *big.Int) (*big.Int, *big.Int) {
@@ -713,6 +965,7 @@ func calculateV3AlgebraPoolPrice(price *big.Int) *big.Float {
 	return new(big.Float).SetInt(new(big.Int).Quo(price, Q96))
 }
 
+/*
 func calculateV3AlgebraPoolPriceImpact(tradeAmount *big.Int, reserve0 *big.Int, reserve1 *big.Int, isToken0ToToken1 bool) *big.Float {
     var newReserve0, newReserve1 *big.Int
     if isToken0ToToken1 {
@@ -735,35 +988,57 @@ func calculateV3AlgebraPoolPriceImpact(tradeAmount *big.Int, reserve0 *big.Int, 
     priceImpact := new(big.Float).Quo(new(big.Float).Sub(newPrice, currentPrice), currentPrice)
     return priceImpact
 }
+*/
+func calculateV3AlgebraPoolPriceImpact(price *big.Int, tradeAmount *big.Int, reserve0 *big.Int, reserve1 *big.Int) *big.Float {
+    initialPrice := new(big.Float).SetInt(price)
+    initialPrice.Mul(initialPrice, initialPrice).Quo(initialPrice, big.NewFloat(1<<96))
+
+    // Simulate price change after trade
+	tradeAmountFloat := new(big.Float).SetInt(tradeAmount)
+    newReserve1 := new(big.Float).Add(new(big.Float).SetInt(reserve1), tradeAmountFloat)
+    newPrice := new(big.Float).Quo(new(big.Float).SetInt(reserve0), newReserve1)
+
+    // Calculate price impact
+    priceImpact := new(big.Float).Sub(initialPrice, newPrice)
+    priceImpact.Quo(priceImpact, initialPrice)
+    priceImpactPercentage := new(big.Float).Mul(priceImpact, big.NewFloat(100))
+	return priceImpactPercentage;
+}
 
 func getV3PriceImpact(client *ethclient.Client, quoterAddress common.Address, amountIn *big.Int, tokenA common.Address, tokenB common.Address, fee *big.Int) (*big.Float, *big.Float, error) {
 
 	//fmt.Printf("getV3PriceImpact\n")
 	
 	uniswapV3PoolAddress, err := getV3PoolAddress(client, quoterAddress, tokenA, tokenB, fee)
-    if err != nil {
-        fmt.Errorf("Failed to get pool address: %v\n", err)
-		return nil, nil, err
+    if err != nil {        
+		return nil, nil, fmt.Errorf("Failed to get pool address: %v\n", err)
     }
 	
+	if (uniswapV3PoolAddress.String() == zero_address) {        
+		return nil, nil, fmt.Errorf("Empty pool address\n")	
+	}
+	 
 	if (fee == nil) {
 	
-		gsprice, _/*tick*/, liquidity, err := getV3AlgebraPoolGlobalStateAndLiquidity(client, uniswapV3PoolAddress)
+		gsprice, _/*tick*/, liquidity, fee, unlocked, err := getV3AlgebraPoolGlobalStateAndLiquidity(client, uniswapV3PoolAddress)
 		if err != nil {
 			fmt.Errorf("Failed to get AlgebraPoolGlobalStateAndLiquidity: %v\n", err)
 			return nil, nil, err
 		}
-		fmt.Printf("Liquidity: %s\n", liquidity.String())
+		fmt.Printf("   Liquidity: %.9f - Fee: %s - Unlocked: %t\n", toEther(liquidity), fee.String(), unlocked)
+		if (unlocked == false) {			
+			return nil, nil, fmt.Errorf("Pool is locked\n")
+		}		
 
 		reserve0, reserve1 := calculateV3AlgebraPoolReserves(gsprice, liquidity)
 		if err != nil {
 			fmt.Errorf("Failed to calculate V3AlgebraPoolReserves: %v\n", err)
 		} else {
-			fmt.Printf("AlgebraPool Reserves: %s - %s\n", reserve0.String(), reserve1.String())			
+			fmt.Printf("   AlgebraPool Reserves: %.9f - %.9f\n", toEther(reserve0), toEther(reserve1))			
 		}
 		
 		price := calculateV3AlgebraPoolPrice(gsprice)		
-		priceImpact := calculateV3AlgebraPoolPriceImpact(amountIn, reserve0, reserve1, true)		
+		priceImpact := calculateV3AlgebraPoolPriceImpact(gsprice, amountIn, reserve0, reserve1)		
 		return price, priceImpact, nil
 		
 	} else {
@@ -773,17 +1048,20 @@ func getV3PriceImpact(client *ethclient.Client, quoterAddress common.Address, am
 			fmt.Errorf("Failed to get slot0: %v\n", err)
 			return nil, nil, err
 		}
-		fmt.Printf("SqrtPriceX96: %s - tick: %s - unlocked: %t\n", sqrtPriceX96.String(), tick.String(), unlocked)
+		fmt.Printf("   SqrtPriceX96: %s - tick: %s - unlocked: %t\n", sqrtPriceX96.String(), tick.String(), unlocked)
+		if (unlocked == false) {			
+			return nil, nil, fmt.Errorf("Pool is locked\n")
+		}			
 
 		liquidity, err := getV3PoolLiquidity(client, uniswapV3PoolAddress)
 		if err != nil {
 			fmt.Errorf("Failed to get liquidity: %v\n", err)
 			return nil, nil, err
 		}
-		fmt.Printf("Liquidity: %s\n", liquidity.String())
+		fmt.Printf("   Liquidity: %.9f\n", toEther(liquidity))
 		
 		reserve0, reserve1 := calculateV3Reserves(sqrtPriceX96, liquidity)
-		fmt.Printf("V3 Reserves: %s - %s\n", reserve0.String(), reserve1.String())	
+		fmt.Printf("   V3 Reserves: %.9f - %.9f\n", toEther(reserve0), toEther(reserve1))	
 
 		price, priceImpact := calculateV3PriceImpact(amountIn, sqrtPriceX96, liquidity)
 		return price, priceImpact, nil
@@ -793,146 +1071,217 @@ func getV3PriceImpact(client *ethclient.Client, quoterAddress common.Address, am
 
 func main() {
 
-	quoteAmount := big.NewInt(quoteAmount)
-	quoteAmount.Div(quoteAmount, big.NewInt(1000))
-	//quoteAmount.Mul(quoteAmount, big.NewInt(100))
+	network, rpc, quoteAmountStr, search_mixed_pools, err := loadNetwork();
+	if err != nil {
+		log.Fatalf("Failed to load Network: %v", err)
+		return
+	}	
+	
+	tradeAddress, err := loadTradeAddress(network)
+	
+	dexRouters, err := loadDexRouters(network)
+	if err != nil {
+		log.Fatalf("Failed to load DexRouters: %v", err)
+		return
+	}
+    fmt.Println("Loaded Routers:")
+    for _, elemr := range dexRouters {
+        fmt.Printf("- Name: %s\n    Type: %s\n    Router: %s\n    Quoter: %s\n", elemr.DexInterface.String(), elemr.Name, elemr.RouterAddress, elemr.QuoterAddress)
+    }	
+
+	nativeToken, err := loadNativeToken(network)
+	if err != nil {
+		log.Fatalf("Failed to load NativeToken: %v", err)
+		return
+	}
+	fmt.Println("Native Token:")
+    fmt.Printf("- Name: %s, Address: %s\n", nativeToken.Name, nativeToken.Address)
+	
+	stableTokens, err := loadStableTokens(network)
+	if err != nil {
+		log.Fatalf("Failed to load StableTokens: %v", err)
+		return
+	}	
+	fmt.Println("Loaded Stables:")
+    for _, elems := range stableTokens {
+        fmt.Printf("- Name: %s, Address: %s\n", elems.Name, elems.Address)
+    }		
+
+	testTokens, err := loadTestTokens(network)
+	if err != nil {
+		log.Fatalf("Failed to load TestTokens: %v", err)
+		return
+	}	
+	fmt.Println("Loaded Tokens:")
+    for _, elemt := range testTokens {
+        fmt.Printf("- Name: %s, Address: %s\n", elemt.Name, elemt.Address)
+    }		
+
+	//quoteAmount := big.NewInt(quoteAmountStr)
+	quoteAmount := big.NewInt(0)
+	quoteAmount.SetString(quoteAmountStr, 10)
+	//quoteAmount.Div(quoteAmount, big.NewInt(2))
+	//quoteAmount.Mul(quoteAmount, big.NewInt(10))
 	
 	amountIn := quoteAmount	
 
-    client, err := createClient()
+    client, err := createClient(rpc)
     if err != nil {
         fmt.Printf("Error creating Ethereum client: %v\n", err)
 		return
     }
-
-    token1Address := WMATICAddress//USDCAddress
-	token1Name := "WMATIC"//"USDC"
-    token2Address := GONEAddress
-	token2Name := "GONE"
 	
+	type quoteResult struct {
+        Errored			bool
+        Unlocked		bool		
+		Price			*big.Float
+        Fee				*big.Int
+		Quote			*big.Int
+		PriceImpact		*big.Float
+		Reserve1		*big.Int
+		Reserve2		*big.Int
+    }
 	
-	fmt.Printf("Token %s: %s - amountIn: %s (%.6f ETH)\n", token1Name, token1Address, amountIn.String(), toEther(amountIn))
-	//fmt.Printf("Last verified value: 1 MATIC = 56.965,047 GONE\n")
-	fmt.Printf("\n")
-	tknAmount, err := getTradeTokenBalance(client, common.HexToAddress(TradeAdddress), common.HexToAddress(WMATICAddress))
-	fmt.Printf("Trade Token %s: %s - Balance: %s (%.6f ETH)\n", "WMATIC", WMATICAddress, tknAmount.String(), toEther(tknAmount))	
-	//fmt.Printf("\n")
-	tknAmount, err = getTradeTokenBalance(client, common.HexToAddress(TradeAdddress), common.HexToAddress(token1Address))
-	fmt.Printf("Trade Token1 %s: %s - Balance: %s (%.6f ETH)\n", token1Name, token1Address, tknAmount.String(), toEther(tknAmount))
-	tknAmount, err = getTradeTokenBalance(client, common.HexToAddress(TradeAdddress), common.HexToAddress(token2Address))
-	fmt.Printf("Trade Token2 %s: %s - Balance: %s (%.6f ETH)\n", token2Name, token2Address, tknAmount.String(), toEther(tknAmount))	
-
-	
-    path := []common.Address{common.HexToAddress(token1Address), common.HexToAddress(token2Address)}	
-	
-	amountUniswV2 := big.NewInt(0)
-	amountUniswV3 := big.NewInt(0)	
-	amountUniswV3Fee := big.NewInt(0)	
-	
-    // Call getAmountsOut
-	fmt.Printf("\nQuote on Uniswap V2 Router: %s\n", UniswapV2RouterAddress)
-	pairAddr, err := getV2PairAddress(client, common.HexToAddress(UniswapV2RouterAddress), path[0], path[1])
-	if (err == nil) {
-		fmt.Printf("V2 PairAddress: %s\n", pairAddr.String())
-		amountUniswV2, err = getAmountsOut(client, common.HexToAddress(UniswapV2RouterAddress), amountIn, path)
-		if err != nil {
-			fmt.Printf("Failed to get Uniswap getAmountsOut: %v\n", err)
-		} else {
-			fmt.Printf("V2 Uniswap amounts Out: %s (%.6f %s)\n", amountUniswV2.String(), toEther(amountUniswV2), token2Name)		
-
-			price, priceImpact, err := getV2PriceImpact(client, common.HexToAddress(UniswapV2RouterAddress), amountIn, path[0], path[1])
-			if err == nil {
-				fmt.Printf("Price: %s - Impact: %s%%\n", price.Text('f', 6), priceImpact.Text('f', 6))		
-			} else {
-				fmt.Printf("V2 Uniswap unable to check price impact: %v\n", err)
+	for _, token1 := range testTokens {
+		for _, token2 := range testTokens {
+		
+			if (token1.Address == token2.Address || (search_mixed_pools == false)) {
+				token1 = nativeToken
 			}
-		}
-	} else {
-		fmt.Printf("V2 Uniswap no pair here\n")
-	}
-	
-    // Call quoteExactInputSingle
-	fmt.Printf("\nQuote on Uniswap V3 Quoter: %s\n", UniswapV3QuoterAddress)	
-	pooladdr, fee, err := findV3PoolAddress(client, common.HexToAddress(UniswapV3QuoterAddress), path[0], path[1])
-	if err == nil {
-		amountUniswV3Fee = fee;
-		fmt.Printf("V3 PoolAddress: %s - Fee: %s\n", pooladdr.String(), fee.String())		
-		amountUniswV3, err = quoteExactInputSingle(client, common.HexToAddress(UniswapV3QuoterAddress), false, amountIn, path, fee, big. NewInt(0))
-		if err != nil {
-			fmt.Printf("Failed to get Uniswap quoteExactInputSingle: %v\n", err)
-		} else {
-			fmt.Printf("V3 Uniswap amounts Out: %s (%.6f %s)\n", amountUniswV3.String(), toEther(amountUniswV3), token2Name)
-			price, priceImpact, err := getV3PriceImpact(client, common.HexToAddress(UniswapV3QuoterAddress), amountIn, path[0], path[1],  fee)
-			if err == nil {
-				fmt.Printf("Price: %s - Impact: %s%% - Fee: %s\n", price.Text('f', 6), priceImpact.Text('f', 6), fee.String())			
-			} else {
-				fmt.Printf("V3 Uniswap unable to check price impact: %v\n", err)
-			}
-		}
-	} else {
-		fmt.Printf("V3 Uniswap no pool here\n")
-	}
-	
-	amountQuickV2 := big.NewInt(0)
-	amountQuickV3 := big.NewInt(0)
-	//amountQuickV3Fee := big.NewInt(0)	
-	
-    // Call getAmountsOut
-	fmt.Printf("\nQuote on Quickswap V2 Router: %s\n", QuickswapV2RouterAddress)
-	pairAddr, err = getV2PairAddress(client, common.HexToAddress(QuickswapV2RouterAddress), path[0], path[1])
-	if (err == nil) {	
-		fmt.Printf("V2 PairAddress: %s\n", pairAddr.String())
-		amountQuickV2, err = getAmountsOut(client, common.HexToAddress(QuickswapV2RouterAddress), amountIn, path)
-		if err != nil {
-			fmt.Printf("Failed to get Quickswap getAmountsOut: %v\n", err)
-		} else {
-			fmt.Printf("V2 Quickswap amounts Out: %s (%.6f %s)\n", amountQuickV2.String(), toEther(amountQuickV2), token2Name)
+		
+			fmt.Printf("\n\nTesting %s:%s\n     on %s:%s\nQuoting: %s (%.6f ETH)\n", token1.Name, token1.Address, token2.Name, token2.Address, amountIn.String(), toEther(amountIn))
 			
-			price, priceImpact, err  := getV2PriceImpact(client, common.HexToAddress(QuickswapV2RouterAddress), amountIn, path[0], path[1])
-			if err == nil {
-				fmt.Printf("Price: %s - Impact: %s%%\n", price.Text('f', 6), priceImpact.Text('f', 6))		
-			} else {
-				fmt.Printf("V2 Quickswap unable to check price impact: %v\n", err)
+			if (tradeAddress != "") {
+				tknAmount, err := getTradeTokenBalance(client, common.HexToAddress(tradeAddress), common.HexToAddress(token1.Address))
+				if err != nil {
+					fmt.Printf("Trade Token1 %s: %s - Balance: %s (%.6f ETH)\n", token1.Name, token1.Address, tknAmount.String(), toEther(tknAmount))
+				}
+				tknAmount, err = getTradeTokenBalance(client, common.HexToAddress(tradeAddress), common.HexToAddress(token2.Address))
+				if err != nil {
+					fmt.Printf("Trade Token2 %s: %s - Balance: %s (%.6f ETH)\n", token2.Name, token2.Address, tknAmount.String(), toEther(tknAmount))
+				}
 			}			
-		}	
-	} else {
-		fmt.Printf("V2 Quickswap no pair here\n")
-	}		
 	
-	// Call quoteExactInputSingle
-	fmt.Printf("\nQuote on Quickswap V3 Quoter: %s\n", QuickswapV3QuoterAddress)
-	pooladdr, fee, err = findV3PoolAddress(client, common.HexToAddress(QuickswapV3QuoterAddress), path[0], path[1])
-	if err == nil {	
-		//amountQuickV3Fee = fee;
-		fmt.Printf("V3 PoolAddress: %s - Fee: %s\n", pooladdr.String(), fee.String())		
-		amountQuickV3, err = quoteExactInputSingle(client, common.HexToAddress(QuickswapV3QuoterAddress), false, amountIn, path, fee, big. NewInt(0))
-		if err != nil {
-			fmt.Printf("Failed to get Quickswap quoteExactInputSingle: %v\n", err)
-		} else {
-			fmt.Printf("V3 Quickswap amounts Out: %s (%.6f %s)\n", amountQuickV3.String(), toEther(amountQuickV3), token2Name)	
+			path := []common.Address{common.HexToAddress(token1.Address), common.HexToAddress(token2.Address)}	
+
+			sortedAddress1, sortedAddress2 := SortAddresses(path[0], path[1])
+			fmt.Printf("Sorted pair: %s - %s\n", sortedAddress1.String(), sortedAddress2.String())				
+	
+			results := make([]quoteResult, len(dexRouters))
 			
-			price, priceImpact, err := getV3PriceImpact(client, common.HexToAddress(QuickswapV3QuoterAddress), amountIn, path[0], path[1], fee)
-			if err == nil {		
-				fmt.Printf("Price: %s - Impact: %s%% - Fee: %s\n", price.Text('f', 6), priceImpact.Text('f', 6), fee.String())					
+			i := 0
+			
+			for _, dex := range dexRouters {
+								
+				fmt.Printf("Dex idx %d - Quote on: %s - Router: %s - Type: %s\n", i, dex.Name, dex.RouterAddress, dex.DexInterface.String())
+				
+				results[i].Errored = true
+				results[i].Unlocked = false
+				
+				if (dex.DexInterface == IUniswapV2Router) {
+					 // Call getAmountsOut
+					pairAddr, err := getV2PairAddress(client, common.HexToAddress(dex.RouterAddress), path[0], path[1])
+					if (err == nil && pairAddr.String() != zero_address) {
+						fmt.Printf("   V2 PairAddress: %s\n", pairAddr.String())
+						results[i].Quote, err = getAmountsOut(client, common.HexToAddress(dex.RouterAddress), amountIn, path)
+						if err != nil {
+							fmt.Printf("   Failed to get %s getAmountsOut: %v\n", dex.Name, err)
+						} else {
+							results[i].Errored = false						
+							fmt.Printf("   V2 %s amounts Out: %s (%.6f %s)\n", dex.Name, results[i].Quote.String(), toEther(results[i].Quote), token2.Name)		
+							results[i].Price, results[i].PriceImpact, err = getV2PriceImpact(client, common.HexToAddress(dex.RouterAddress), amountIn, path[0], path[1])
+							if err == nil {
+								results[i].Unlocked	= true
+								fmt.Printf("   Price: %s - Impact: %s%%\n", results[i].Price.Text('f', 6), results[i].PriceImpact.Text('f', 6))								
+							} else {
+								fmt.Printf("   V2 %s unable to check price impact: %v\n", dex.Name, err)
+							}
+						}
+					} else {
+						fmt.Printf("   V2 %s no pair here\n", dex.Name)
+					}					 
+				//} else if (dex.DexInterface == IQuickswapV3RouterQuoter) {					
+				} else if ((dex.DexInterface == IUniswapV3RouterQuoter01) || (dex.DexInterface == IUniswapV3RouterQuoter02) || (dex.DexInterface == IQuickswapV3RouterQuoter)) {
+					// Call quoteExactInputSingle
+					fmt.Printf("   Quote on %s V3 Quoter: %s\n", dex.Name, dex.QuoterAddress)	
+					pooladdr, fee, err := findV3PoolAddress(client, common.HexToAddress(dex.QuoterAddress), path[0], path[1])
+					if (err == nil && pooladdr.String() != zero_address) {
+						results[i].Fee = fee;
+						fmt.Printf("   V3 PoolAddress: %s - Fee: %s\n", pooladdr.String(), results[i].Fee.String())		
+						results[i].Quote, err = quoteExactInputSingle(client, common.HexToAddress(dex.QuoterAddress), (dex.DexInterface == IUniswapV3RouterQuoter02), amountIn, path, results[i].Fee, big. NewInt(0))
+						if err != nil {
+							fmt.Printf("   Failed to get %s quoteExactInputSingle: %v\n", dex.Name, err)
+						} else {
+							results[i].Errored = false						
+							fmt.Printf("   V3 %s amounts Out: %s (%.6f %s)\n", dex.Name, results[i].Quote.String(), toEther(results[i].Quote), token2.Name)
+							results[i].Price, results[i].PriceImpact, err = getV3PriceImpact(client, common.HexToAddress(dex.QuoterAddress), amountIn, path[0], path[1], results[i].Fee)
+							if err == nil {
+								fmt.Printf("   Price: %s - Impact: %s%% - Fee: %s\n", results[i].Price.Text('f', 6), results[i].PriceImpact.Text('f', 6), results[i].Fee.String())
+								results[i].Unlocked	= true
+							} else {
+								fmt.Printf("   V3 %s unable to check price impact: %v\n", dex.Name, err)
+							}
+						}
+					} else {
+						fmt.Printf("   V3 %s no pool here\n", dex.Name)
+					}				
+				} else if (dex.DexInterface == IUniswapV4PoolManager) {
+					fmt.Printf("   WARN: IUniswapV4PoolManager unsupported yet\n")
+				}
+				
+				i = i + 1
+			}	
+			
+			minIdx := -1
+			maxIdx := -1
+
+			i = 0
+			for _, res := range results {
+				if ((res.Errored == false)&&(res.Unlocked == true)&&(res.PriceImpact.Cmp(big.NewFloat(0.02)) < 0)&&(res.PriceImpact.Cmp(big.NewFloat(-0.02)) > 0)) {
+					if (minIdx == -1 || results[minIdx].Quote.Cmp(res.Quote) < 0) {
+						minIdx = i
+					}
+					if (maxIdx == -1 || results[maxIdx].Quote.Cmp(res.Quote) > 0) {
+						maxIdx = i
+					}					
+				}
+				i = i + 1
+			}
+
+			fmt.Printf("\n")	
+			if (minIdx != -1 && maxIdx != -1 && minIdx != maxIdx) {
+					
+				//dbg
+				//fmt.Printf("minIdx: %d - maxIdx: %d\n", minIdx, maxIdx)
+				
+				quoteBack := big.NewInt(0)
+				revertpath := []common.Address{path[1], path[0]}	
+				
+				if (dexRouters[maxIdx].DexInterface == IUniswapV2Router) {
+					quoteBack, err = getAmountsOut(client, common.HexToAddress(dexRouters[maxIdx].RouterAddress), results[minIdx].Quote, revertpath)				
+				} else if ((dexRouters[maxIdx].DexInterface == IUniswapV3RouterQuoter01) || (dexRouters[maxIdx].DexInterface == IUniswapV3RouterQuoter02) || (dexRouters[maxIdx].DexInterface == IQuickswapV3RouterQuoter)) {
+					quoteBack, err = quoteExactInputSingle(client, common.HexToAddress(dexRouters[maxIdx].QuoterAddress), (dexRouters[maxIdx].DexInterface == IUniswapV3RouterQuoter02), results[minIdx].Quote, revertpath, results[maxIdx].Fee, big.NewInt(0))
+				} else if (dexRouters[maxIdx].DexInterface == IUniswapV4PoolManager) {
+					fmt.Printf("WARN: IUniswapV4PoolManager unsupported yet\n")
+				}
+				if results[minIdx].Fee == nil {
+					results[minIdx].Fee = big.NewInt(0)
+				}
+				if results[maxIdx].Fee == nil {
+					results[maxIdx].Fee = big.NewInt(0)
+				}						
+				fmt.Printf("Swap %s\\%s\n  buying %.6f ETH from %s and selling to %s to get back: %.6f ETH (delta: %.6f ETH)\n", token1.Name, token2.Name, toEther(quoteAmount), dexRouters[minIdx].Name, dexRouters[maxIdx].Name, toEther(quoteBack), toEther(quoteBack.Sub(quoteBack, quoteAmount)))
+				fmt.Printf("[[%d,\"%s\",\"%s\",%s,0],[%d,\"%s\",\"%s\",%s,0]]\n%s\n%f\n", dexRouters[minIdx].DexInterface.Int(), dexRouters[minIdx].RouterAddress, token1.Address, results[minIdx].Fee.String(), dexRouters[maxIdx].DexInterface.Int(), dexRouters[maxIdx].RouterAddress, token2.Address, results[maxIdx].Fee.String(), amountIn.String(), toEther(amountIn))		
+			
 			} else {
-				fmt.Printf("V3 Quickswap unable to check price impact: %v\n", err)
-			}		
-		}
-	} else {
-		fmt.Printf("V3 Quickswap no pool here\n")
-	}		
+				fmt.Printf("No Swap available\n")
+			}			
+			fmt.Printf("\n")
+		}	
+		if (search_mixed_pools == false)	{
+			break;
+		}		
+	}
 	
-	fmt.Printf("\n")
-	quoteBack := big.NewInt(0)
-	revertpath := []common.Address{path[1], path[0]}	
-	if (amountUniswV3.Cmp(amountQuickV2) < 0) {
-		quoteBack, err = quoteExactInputSingle(client, common.HexToAddress(UniswapV3QuoterAddress), false, amountQuickV2, revertpath, amountUniswV3Fee, big. NewInt(0))
-		fmt.Printf("Swap buying from QuickV2 and selling to UniswV3 to get back: %.6f ETH (delta: %.6f ETH)\n", toEther(quoteBack), toEther(quoteBack.Sub(quoteBack, quoteAmount)))
-		fmt.Printf("[[0,\"%s\",\"%s\",0,0],[1,\"%s\",\"%s\",%s,0]]\n%s\n%f\n", QuickswapV2RouterAddress, token1Address, UniswapV3RouterAddress, token2Address, amountUniswV3Fee.String(), amountIn.String(), toEther(amountIn))		
-	} else {
-		quoteBack, err = getAmountsOut(client, common.HexToAddress(QuickswapV2RouterAddress), amountUniswV3, revertpath)
-		fmt.Printf("Swap buying from UniswV3 and selling to QuickV2 to get back: %.6f ETH (delta: %.6f ETH)\n", toEther(quoteBack), toEther(quoteBack.Sub(quoteBack, quoteAmount)))
-		fmt.Printf("[[1,\"%s\",\"%s\",%s,0],[0,\"%s\",\"%s\",0,0]]\n%s\n%f\n", UniswapV3RouterAddress, token1Address, amountUniswV3Fee.String(), QuickswapV2RouterAddress, token2Address, amountIn.String(), toEther(amountIn))
-	}	
 	fmt.Printf("\n")
 }
