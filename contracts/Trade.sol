@@ -192,14 +192,16 @@ contract Trade is Deposit {
         _;
     }
 
+    /*
     // KEEP THIS FUNCTION IN CASE THE CONTRACT RECEIVES TOKENS!
     function safeWithdrawToken(address _tokenAddress, uint256 amount) public onlyOwner {
         uint256 balance = IERC20(_tokenAddress).balanceOf(address(this));
         require(amount <= balance, "Insufficient Token balance");
         IERC20(_tokenAddress).transfer(OWNER, amount);
     }
+    */
 
-    // KEEP THIS FUNCTION IN CASE THE CONTRACT KEEPS LEFTOVER ETHER!
+    // KEEP THIS FUNCTION IN CASE THE CONTRACT RECEIVS OR KEEPS LEFTOVER ETHER!
     function safeWithdrawEther(uint256 amount) public onlyOwner {
         address self = address(this); // workaround for a possible solidity bug
         uint256 balance = self.balance;
