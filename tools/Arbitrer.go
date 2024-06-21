@@ -1,22 +1,19 @@
 package main
 
 import (
-    "context"
-    "fmt"
+	"context"
+	"fmt"
 	"errors"
 	"sort"
-    //"log"
-    "math/big"
-    "strings"
+	//"log"
+	"math/big"
+	"strings"
 	"os"
 	"log"
-	//"encoding/hex"
-    //"github.com/ethereum/go-ethereum"
-    "github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-    "github.com/ethereum/go-ethereum/common"
-    //"github.com/ethereum/go-ethereum/core/types"
-    "github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/joho/godotenv"
 )
 
